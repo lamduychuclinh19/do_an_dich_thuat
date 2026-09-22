@@ -7,5 +7,10 @@ class PoiCreate(BaseModel):
     address: str = Field(min_length=1)
 
 
+class PoiVisibility(BaseModel):
+    is_active: bool
+
+
 class PoiResponse(PoiCreate):
     id: int
+    is_active: bool
