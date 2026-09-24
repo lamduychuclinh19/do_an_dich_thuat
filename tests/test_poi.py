@@ -9,9 +9,12 @@ client = TestClient(app)
 def test_poi_full_flow():
     # 1. Tạo địa điểm
     new_poi = {
-        "name": "Bến Nhà Rồng",
-        "description": "Một địa điểm lịch sử tại Quận 4",
-        "address": "01 Nguyễn Tất Thành, Quận 4"
+    "name": "Điểm trưng bày A",
+    "description": "Nội dung thuyết minh của điểm A",
+    "address": "Bảo tàng",
+    "latitude": 10.776900,
+    "longitude": 106.700900,
+    "trigger_radius_meters": 2
     }
 
     create_response = client.post("/api/pois", json=new_poi)
@@ -32,9 +35,12 @@ def test_poi_full_flow():
 
     # 3. Cập nhật địa điểm
     updated_data = {
-        "name": "Bảo tàng Hồ Chí Minh",
-        "description": "Địa điểm tham quan lịch sử",
-        "address": "01 Nguyễn Tất Thành, Quận 4"
+    "name": "Điểm trưng bày A đã cập nhật",
+    "description": "Nội dung thuyết minh đã cập nhật",
+    "address": "Bảo tàng",
+    "latitude": 10.776900,
+    "longitude": 106.700900,
+    "trigger_radius_meters": 2
     }
 
     update_response = client.put(
@@ -79,3 +85,33 @@ def test_poi_full_flow():
     visible_response = client.get(f"/api/pois/{poi_id}")
 
     assert visible_response.status_code == 200
+
+    # Khách đứng cách POI khoảng 1 mét
+    nearby_response = client.get(
+        "/api/pois/nearby",
+        params={
+            "latitude": 10.776909,
+            "longitude": 106.700900
+        }
+    )
+
+    assert nearby_response.status_code == 200
+
+    nearby_poi = nearby_response.json()
+
+    assert nearby_poi is not None
+    assert nearby_poi["id"] == poi_id
+    assert nearby_poi["distance_meters"] <= 2
+
+
+    # Khách đứng cách POI khoảng 3 mét
+    outside_response = client.get(
+        "/api/pois/nearby",
+        params={
+            "latitude": 10.776927,
+            "longitude": 106.700900
+        }
+    )
+
+    assert outside_response.status_code == 200
+    assert outside_response.json() is None
