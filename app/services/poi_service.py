@@ -2,7 +2,7 @@ from fastapi import HTTPException, status
 
 from app.repositaries.poi_repository import poi_repository
 from app.schemas.poi_schema import PoiCreate, PoiVisibility
-
+from math import atan2, cos, radians, sin, sqrt
 
 
 class PoiService:
@@ -54,6 +54,67 @@ class PoiService:
 
     def get_all_pois(self) -> list:
         return poi_repository.get_active()
+
+    def calculate_distance(
+        self,
+        user_latitude: float,
+        user_longitude: float,
+        poi_latitude: float,
+        poi_longitude: float
+    ) -> float:
+        earth_radius = 6_371_000
+
+        user_lat = radians(user_latitude)
+        user_lng = radians(user_longitude)
+        poi_lat = radians(poi_latitude)
+        poi_lng = radians(poi_longitude)
+
+        difference_lat = poi_lat - user_lat
+        difference_lng = poi_lng - user_lng
+
+        a = (
+            sin(difference_lat / 2) ** 2
+            + cos(user_lat)
+            * cos(poi_lat)
+            * sin(difference_lng / 2) ** 2
+        )
+
+        c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+        return earth_radius * c
+
+    def find_nearby_poi(
+        self,
+        # vĩ độ
+        latitude: float,
+        # kinh độ
+        longitude: float
+    ) -> dict | None:
+        nearest_poi = None
+
+        for poi in poi_repository.get_active():
+            distance = self.calculate_distance(
+                latitude,
+                longitude,
+                poi["latitude"],
+                poi["longitude"]
+            )
+
+            is_inside_trigger_area = (
+                distance <= poi["trigger_radius_meters"]
+            )
+
+            if is_inside_trigger_area:
+                if (
+                    nearest_poi is None
+                    or distance < nearest_poi["distance_meters"]
+                ):
+                    nearest_poi = {
+                        **poi,
+                        "distance_meters": round(distance, 2)
+                    }
+
+        return nearest_poi
 
 
 poi_service = PoiService()

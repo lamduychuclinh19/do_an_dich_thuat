@@ -1,6 +1,6 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, status
 
-from app.schemas.poi_schema import PoiCreate, PoiResponse, PoiVisibility
+from app.schemas.poi_schema import NearbyPoiResponse, PoiCreate, PoiResponse, PoiVisibility
 from app.services.poi_service import poi_service
 
 
@@ -23,6 +23,15 @@ def create_poi(data: PoiCreate):
 def get_all_pois():
     return poi_service.get_all_pois()
 
+@router.get("/nearby",response_model=NearbyPoiResponse | None)
+def find_nearby_poi(
+    latitude: float = Query(ge=-90, le=90),
+    longitude: float = Query(ge=-180, le=180)
+):
+    return poi_service.find_nearby_poi(
+        latitude,
+        longitude
+    )
 
 @router.get("/{poi_id}", response_model=PoiResponse)
 def get_poi_by_id(poi_id: int):
