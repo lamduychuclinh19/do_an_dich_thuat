@@ -2,6 +2,8 @@ from fastapi import APIRouter, Query, status
 
 from app.schemas.poi_schema import NearbyPoiResponse, PoiCreate, PoiResponse, PoiVisibility
 from app.services.poi_service import poi_service
+from fastapi import APIRouter, Depends, HTTPException
+from app.dependencies.auth_dependency import require_admin
 
 
 router = APIRouter(
@@ -13,7 +15,8 @@ router = APIRouter(
 @router.post(
     "",
     response_model=PoiResponse,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_admin)],
 )
 def create_poi(data: PoiCreate):
     return poi_service.create_poi(data)
@@ -37,13 +40,15 @@ def find_nearby_poi(
 def get_poi_by_id(poi_id: int):
     return poi_service.get_poi_by_id(poi_id)
 
-@router.put("/{poi_id}", response_model=PoiResponse)
-def update_poi(poi_id: int, data: PoiCreate):
-    return poi_service.update_poi(poi_id, data)
-
+@router.put(
+    "/{poi_id}",
+    response_model= PoiResponse,
+    dependencies=[Depends(require_admin)],
+)
 @router.patch(
     "/{poi_id}/visibility",
-    response_model=PoiResponse
+    response_model= PoiResponse,
+    dependencies=[Depends(require_admin)],
 )
 def set_poi_visibility(
     poi_id: int,

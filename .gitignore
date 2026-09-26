@@ -4,3 +4,6 @@ __pycache__/
 .env
 .vscode/
 ~$*
+.fake
+uploads/audio/*
+uploads/audio.backup

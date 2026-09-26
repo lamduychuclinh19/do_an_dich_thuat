@@ -9,10 +9,10 @@ class PoiCreate(BaseModel):
     latitude: float = Field(ge=-90, le=90)
     longitude: float = Field(ge=-180, le=180)
 
-    trigger_radius_meters: int = Field(
-        default=30,
-        gt=0,
-        le=500
+    trigger_radius_meters: float = Field(
+        default=2,
+        ge=1,
+        le=2,
     )
 
 
@@ -23,6 +23,7 @@ class PoiVisibility(BaseModel):
 class PoiResponse(PoiCreate):
     id: int
     is_active: bool
+
 
 class NearbyPoiResponse(PoiResponse):
     distance_meters: float
