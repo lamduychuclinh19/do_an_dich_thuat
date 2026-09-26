@@ -13,3 +13,9 @@ typing_extensions==4.16.0
 uvicorn==0.53.0
 pytest
 httpx
+PyJWT
+pwdlib[argon2]
+python-dotenv
+SQLAlchemy
+pyodbc
+python-multipart

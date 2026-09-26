@@ -1,11 +1,111 @@
+import pytest
 from fastapi.testclient import TestClient
-
 from app.main import app
-
+from app.repositaries.poi_repository import poi_repository
+from app.dependencies.auth_dependency import require_admin
 
 client = TestClient(app)
 
+@pytest.fixture(autouse=True)
+def mock_admin_login():
+    app.dependency_overrides[require_admin] = lambda: {
+        "id": 1,
+        "username": "test_admin",
+        "role": "admin",
+    }
 
+    yield
+
+    app.dependency_overrides.clear()
+
+@pytest.fixture(autouse=True)
+def mock_poi_repository(monkeypatch):
+    pois = {}
+    next_id = {"value": 1}
+
+    def fake_create(data: dict):
+        poi_id = next_id["value"]
+
+        poi = {
+            **data,
+            "id": poi_id,
+            "is_active": True,
+        }
+
+        pois[poi_id] = poi
+        next_id["value"] += 1
+        return poi
+
+    def fake_get_by_id(poi_id: int):
+        return pois.get(poi_id)
+
+    def fake_get_active():
+        return [
+            poi
+            for poi in pois.values()
+            if poi["is_active"] is True
+        ]
+
+    def fake_get_all():
+        return list(pois.values())
+
+    def fake_update(poi_id: int, data: dict):
+        poi = pois.get(poi_id)
+
+        if poi is None:
+            return None
+
+        poi.update(data)
+        return poi
+
+    def fake_set_visibility(poi_id: int, is_active: bool):
+        poi = pois.get(poi_id)
+
+        if poi is None:
+            return None
+
+        poi["is_active"] = is_active
+        return poi
+
+    monkeypatch.setattr(
+        poi_repository,
+        "create",
+        fake_create,
+    )
+    monkeypatch.setattr(
+        poi_repository,
+        "get_by_id",
+        fake_get_by_id,
+    )
+    monkeypatch.setattr(
+        poi_repository,
+        "get_active",
+        fake_get_active,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        poi_repository,
+        "get_all_active",
+        fake_get_active,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        poi_repository,
+        "get_all",
+        fake_get_all,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        poi_repository,
+        "update",
+        fake_update,
+    )
+    monkeypatch.setattr(
+        poi_repository,
+        "set_visibility",
+        fake_set_visibility,
+    )
+    
 def test_poi_full_flow():
     # 1. Tạo địa điểm
     new_poi = {
