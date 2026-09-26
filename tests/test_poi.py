@@ -1,10 +1,21 @@
+import pytest
 from fastapi.testclient import TestClient
-
 from app.main import app
-
+from app.dependencies.auth_dependency import require_admin
 
 client = TestClient(app)
 
+@pytest.fixture(autouse=True)
+def mock_admin_login():
+    app.dependency_overrides[require_admin] = lambda: {
+        "id": 1,
+        "username": "test_admin",
+        "role": "admin",
+    }
+
+    yield
+
+    app.dependency_overrides.clear()
 
 def test_poi_full_flow():
     # 1. Tạo địa điểm
