@@ -1,14 +1,18 @@
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Depends, Query, status
 
-from app.schemas.poi_schema import NearbyPoiResponse, PoiCreate, PoiResponse, PoiVisibility
-from app.services.poi_service import poi_service
-from fastapi import APIRouter, Depends, HTTPException
 from app.dependencies.auth_dependency import require_admin
+from app.schemas.poi_schema import (
+    NearbyPoiResponse,
+    PoiCreate,
+    PoiResponse,
+    PoiVisibility,
+)
+from app.services.poi_service import poi_service
 
 
 router = APIRouter(
     prefix="/api/pois",
-    tags=["POIs"]
+    tags=["POIs"],
 )
 
 
@@ -22,36 +26,62 @@ def create_poi(data: PoiCreate):
     return poi_service.create_poi(data)
 
 
-@router.get("", response_model=list[PoiResponse])
+@router.get(
+    "",
+    response_model=list[PoiResponse],
+)
 def get_all_pois():
     return poi_service.get_all_pois()
 
-@router.get("/nearby",response_model=NearbyPoiResponse | None)
+
+# Phải đặt /nearby trước /{poi_id}
+@router.get(
+    "/nearby",
+    response_model=NearbyPoiResponse | None,
+)
 def find_nearby_poi(
     latitude: float = Query(ge=-90, le=90),
-    longitude: float = Query(ge=-180, le=180)
+    longitude: float = Query(ge=-180, le=180),
 ):
     return poi_service.find_nearby_poi(
         latitude,
-        longitude
+        longitude,
     )
 
-@router.get("/{poi_id}", response_model=PoiResponse)
+
+@router.get(
+    "/{poi_id}",
+    response_model=PoiResponse,
+)
 def get_poi_by_id(poi_id: int):
     return poi_service.get_poi_by_id(poi_id)
 
+
 @router.put(
     "/{poi_id}",
-    response_model= PoiResponse,
+    response_model=PoiResponse,
     dependencies=[Depends(require_admin)],
 )
+def update_poi(
+    poi_id: int,
+    data: PoiCreate,
+):
+    return poi_service.update_poi(
+        poi_id,
+        data,
+    )
+
+
 @router.patch(
     "/{poi_id}/visibility",
-    response_model= PoiResponse,
+    response_model=PoiResponse,
     dependencies=[Depends(require_admin)],
 )
 def set_poi_visibility(
     poi_id: int,
-    data: PoiVisibility
+    data: PoiVisibility,
 ):
-    return poi_service.set_poi_visibility(poi_id, data)
+    return poi_service.set_poi_visibility(
+        poi_id,
+        data,
+    )
