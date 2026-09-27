@@ -115,6 +115,7 @@ class PoiService:
                     }
 
         return nearest_poi
-
+    def get_all_pois_for_admin(self) -> list:
+        return poi_repository.get_all_for_admin()
 
 poi_service = PoiService()

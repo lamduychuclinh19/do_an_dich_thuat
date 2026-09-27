@@ -1,5 +1,4 @@
 from sqlalchemy import text
-
 from app.database import engine
 
 
@@ -196,5 +195,66 @@ class TranslationRepository:
             ).mappings().first()
 
         return self._convert_row_to_dict(row)
+    def get_all_for_admin_by_poi(self,poi_id: int,) -> list:
+        query = text(
+            """
+            SELECT
+                id,
+                poi_id,
+                language_code,
+                title,
+                narration_text,
+                audio_url,
+                is_active
+            FROM dbo.translations
+            WHERE poi_id = :poi_id
+            ORDER BY language_code
+            """
+        )
 
+        with engine.connect() as connection:
+            result = connection.execute(
+                query,
+                {"poi_id": poi_id},
+            )
+
+            return [
+                dict(row)
+                for row in result.mappings().all()
+            ]
+
+    def set_visibility(self,translation_id: int,is_active: bool,) -> dict | None:
+        query = text(
+            """
+            UPDATE dbo.translations
+            SET
+                is_active = :is_active,
+                updated_at = SYSUTCDATETIME()
+            OUTPUT
+                INSERTED.id,
+                INSERTED.poi_id,
+                INSERTED.language_code,
+                INSERTED.title,
+                INSERTED.narration_text,
+                INSERTED.audio_url,
+                INSERTED.is_active
+            WHERE id = :translation_id
+            """
+        )
+
+        with engine.begin() as connection:
+            result = connection.execute(
+                query,
+                {
+                    "translation_id": translation_id,
+                    "is_active": is_active,
+                },
+            )
+
+            row = result.mappings().first()
+
+            if row is None:
+                return None
+
+            return dict(row)
 translation_repository = TranslationRepository()

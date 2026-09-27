@@ -33,3 +33,7 @@ class TranslationUpdate(BaseModel):
 class TranslationResponse(TranslationCreate):
     id: int
     is_active: bool
+
+class TranslationVisibility(BaseModel):
+    is_active: bool
+    
