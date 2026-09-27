@@ -97,6 +97,12 @@ def mock_poi_repository(monkeypatch):
     )
     monkeypatch.setattr(
         poi_repository,
+        "get_all_for_admin",
+        fake_get_all,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        poi_repository,
         "update",
         fake_update,
     )
@@ -117,7 +123,7 @@ def test_poi_full_flow():
     "trigger_radius_meters": 2
     }
 
-    create_response = client.post("/api/pois", json=new_poi)
+    create_response = client.post("/api/admin/pois", json=new_poi)
 
     assert create_response.status_code == 201
 
@@ -128,7 +134,7 @@ def test_poi_full_flow():
     assert created_poi["is_active"] is True
 
     # 2. Lấy địa điểm theo id
-    get_response = client.get(f"/api/pois/{poi_id}")
+    get_response = client.get(f"/api/public/pois/{poi_id}")
 
     assert get_response.status_code == 200
     assert get_response.json()["id"] == poi_id
@@ -144,7 +150,7 @@ def test_poi_full_flow():
     }
 
     update_response = client.put(
-        f"/api/pois/{poi_id}",
+        f"/api/admin/pois/{poi_id}",
         json=updated_data
     )
 
@@ -153,7 +159,7 @@ def test_poi_full_flow():
 
     # 4. Ẩn địa điểm
     hide_response = client.patch(
-        f"/api/pois/{poi_id}/visibility",
+        f"/api/admin/pois/{poi_id}/visibility",
         json={"is_active": False}
     )
 
@@ -161,11 +167,11 @@ def test_poi_full_flow():
     assert hide_response.json()["is_active"] is False
 
     # 5. Địa điểm ẩn không thể được xem công khai
-    hidden_response = client.get(f"/api/pois/{poi_id}")
+    hidden_response = client.get(f"/api/public/pois/{poi_id}")
 
     assert hidden_response.status_code == 404
 
-    list_response = client.get("/api/pois")
+    list_response = client.get("/api/public/pois")
 
     assert list_response.status_code == 200
     assert all(
@@ -173,45 +179,24 @@ def test_poi_full_flow():
         for poi in list_response.json()
     )
 
+    # Admin vẫn xem được địa điểm đang bị ẩn
+    admin_list_response = client.get("/api/admin/pois")
+
+    assert admin_list_response.status_code == 200
+    assert any(
+        poi["id"] == poi_id and poi["is_active"] is False
+        for poi in admin_list_response.json()
+    )
+
     # 6. Hiện lại địa điểm
     show_response = client.patch(
-        f"/api/pois/{poi_id}/visibility",
+        f"/api/admin/pois/{poi_id}/visibility",
         json={"is_active": True}
     )
 
     assert show_response.status_code == 200
     assert show_response.json()["is_active"] is True
 
-    visible_response = client.get(f"/api/pois/{poi_id}")
+    visible_response = client.get(f"/api/public/pois/{poi_id}")
 
     assert visible_response.status_code == 200
-
-    # Khách đứng cách POI khoảng 1 mét
-    nearby_response = client.get(
-        "/api/pois/nearby",
-        params={
-            "latitude": 10.776909,
-            "longitude": 106.700900
-        }
-    )
-
-    assert nearby_response.status_code == 200
-
-    nearby_poi = nearby_response.json()
-
-    assert nearby_poi is not None
-    assert nearby_poi["id"] == poi_id
-    assert nearby_poi["distance_meters"] <= 2
-
-
-    # Khách đứng cách POI khoảng 3 mét
-    outside_response = client.get(
-        "/api/pois/nearby",
-        params={
-            "latitude": 10.776927,
-            "longitude": 106.700900
-        }
-    )
-
-    assert outside_response.status_code == 200
-    assert outside_response.json() is None

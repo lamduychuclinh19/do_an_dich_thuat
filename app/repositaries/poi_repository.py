@@ -211,6 +211,30 @@ class PoiRepository:
             self._convert_row_to_dict(row)
             for row in rows
         ]
+    def get_all_for_admin(self) -> list:
+        query = text(
+            """
+            SELECT
+                id,
+                name,
+                description,
+                address,
+                latitude,
+                longitude,
+                trigger_radius_meters,
+                is_active
+            FROM dbo.pois
+            ORDER BY id DESC
+            """
+        )
+
+        with engine.connect() as connection:
+            result = connection.execute(query)
+
+            return [
+                dict(row)
+                for row in result.mappings().all()
+            ]
 
 
 poi_repository = PoiRepository()

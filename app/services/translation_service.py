@@ -157,5 +157,31 @@ class TranslationService:
             )
 
         return updated_translation
+    def get_all_translations_for_admin(self,poi_id: int,) -> list:
+        poi = poi_repository.get_by_id(poi_id)
 
+        if poi is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="POI not found",
+            )
+
+        return translation_repository.get_all_for_admin_by_poi(
+            poi_id,
+        )
+    def set_translation_visibility(self,translation_id: int,is_active: bool,) -> dict:
+        updated_translation = (
+            translation_repository.set_visibility(
+                translation_id,
+                is_active,
+            )
+        )
+
+        if updated_translation is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Translation not found",
+            )
+
+        return updated_translation
 translation_service = TranslationService()
