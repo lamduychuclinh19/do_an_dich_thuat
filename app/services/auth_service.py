@@ -87,6 +87,13 @@ class AuthService:
         access_token = self._create_access_token(
             admin_id=admin["id"],
             username=admin["username"],
+            )
+
+
+        # Chỉ cập nhật thời gian sau khi đăng nhập
+        # và tạo token thành công.
+        admin_repository.update_last_login(
+            admin["id"]
         )
 
         return TokenResponse(
@@ -173,7 +180,15 @@ class AuthService:
         return {
             "id": admin["id"],
             "username": admin["username"],
-            "role": "admin",
+
+            # Lấy vai trò thật từ SQL thay vì tin tưởng
+            # vai trò nằm bên trong token.
+            "role": admin["role"],
+
+            "is_active": admin["is_active"],
+            "must_change_password": (
+                admin["must_change_password"]
+            ),
         }
 
 

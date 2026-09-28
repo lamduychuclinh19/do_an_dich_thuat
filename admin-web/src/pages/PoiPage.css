@@ -1,0 +1,279 @@
+.poi-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+
+.poi-heading p {
+  margin: 0 0 8px;
+  color: #a2772d;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.poi-heading h1 {
+  margin: 0 0 8px;
+  color: #173c36;
+  font-size: 34px;
+}
+
+.poi-heading div > span {
+  color: #778581;
+}
+
+.poi-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 12px 18px;
+  border: 1px solid #dce3e1;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.poi-summary strong {
+  color: #1c5149;
+  font-size: 24px;
+}
+
+.poi-summary span {
+  color: #75837f;
+  font-size: 13px;
+}
+
+.poi-container {
+  overflow: hidden;
+  border: 1px solid #e0e6e4;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 8px 25px rgba(20, 55, 49, 0.05);
+}
+
+.poi-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px;
+  border-bottom: 1px solid #e7ecea;
+}
+
+.search-box {
+  width: min(100%, 430px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border: 1px solid #dce3e1;
+  border-radius: 10px;
+  background: #f9fbfa;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 12px 0;
+  border: 0;
+  outline: none;
+  color: #24443e;
+  background: transparent;
+}
+
+.refresh-button {
+  padding: 11px 16px;
+  border: 1px solid #ccd7d4;
+  border-radius: 9px;
+  color: #285048;
+  background: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.refresh-button:hover {
+  background: #f1f5f4;
+}
+
+.poi-table-wrapper {
+  overflow-x: auto;
+}
+
+.poi-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.poi-table th {
+  padding: 13px 18px;
+  color: #70807c;
+  background: #f7f9f8;
+  font-size: 12px;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.poi-table td {
+  padding: 17px 18px;
+  border-top: 1px solid #edf0ef;
+  color: #40534f;
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.poi-table tbody tr:hover {
+  background: #fbfcfc;
+}
+
+.poi-id {
+  color: #8b9995;
+  font-weight: 700;
+}
+
+.poi-information {
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.poi-information strong {
+  color: #1b403a;
+}
+
+.poi-information span {
+  max-width: 320px;
+  overflow: hidden;
+  color: #82908c;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status {
+  display: inline-block;
+  min-width: 100px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.active-status {
+  color: #187057;
+  background: #dcf5ea;
+}
+
+.hidden-status {
+  color: #747f7c;
+  background: #e8edeb;
+}
+
+.visibility-button {
+  min-width: 70px;
+  padding: 8px 13px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.visibility-button.hide {
+  border: 1px solid #efc4c4;
+  color: #a33a3a;
+  background: #fff7f7;
+}
+
+.visibility-button.show {
+  border: 1px solid #acd9ca;
+  color: #197058;
+  background: #f1fbf7;
+}
+
+.visibility-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.poi-error {
+  margin: 16px 20px 0;
+  padding: 12px;
+  border-radius: 9px;
+  color: #a42c2c;
+  background: #ffeded;
+}
+
+.empty-cell {
+  height: 150px;
+  color: #81908c;
+  text-align: center !important;
+}
+
+.poi-table-footer {
+  padding: 15px 20px;
+  border-top: 1px solid #e7ecea;
+  color: #7b8985;
+  font-size: 13px;
+}
+
+@media (max-width: 700px) {
+  .poi-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .poi-toolbar {
+    flex-direction: column;
+  }
+
+  .search-box {
+    width: 100%;
+  }
+}
+.poi-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.add-poi-button {
+  padding: 13px 18px;
+  border: 1px solid #153a34;
+  border-radius: 10px;
+  color: #ffffff;
+  background: #153a34;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.add-poi-button:hover {
+  background: #20554d;
+}
+
+.poi-action-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-poi-button {
+  padding: 8px 13px;
+  border: 1px solid #c9d5d2;
+  border-radius: 8px;
+  color: #315a52;
+  background: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.edit-poi-button:hover {
+  background: #eef5f3;
+}
+
+@media (max-width: 700px) {
+  .poi-heading-actions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
