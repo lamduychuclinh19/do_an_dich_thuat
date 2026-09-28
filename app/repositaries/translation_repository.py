@@ -257,4 +257,118 @@ class TranslationRepository:
                 return None
 
             return dict(row)
+    def get_public_guides(
+        self,
+        requested_language_code: str,
+    ) -> list[dict]:
+        """
+        Lấy nội dung thuyết minh của tất cả POI đang hiển thị.
+
+        Thứ tự ưu tiên ngôn ngữ:
+        1. Ngôn ngữ khách yêu cầu.
+        2. Tiếng Anh nếu chưa có ngôn ngữ yêu cầu.
+        3. Tiếng Việt nếu cũng chưa có tiếng Anh.
+
+        POI bị ẩn hoặc bản dịch bị ẩn sẽ không được trả ra.
+        """
+
+        query = text(
+            """
+            SELECT
+                p.id AS poi_id,
+                p.name AS poi_name,
+                p.address,
+                p.latitude,
+                p.longitude,
+                p.trigger_radius_meters,
+
+                :requested_language_code
+                    AS requested_language_code,
+
+                selected_translation.language_code,
+                selected_translation.title,
+                selected_translation.narration_text,
+                selected_translation.audio_url,
+
+                CASE
+                    WHEN selected_translation.language_code
+                         = :requested_language_code
+                    THEN CAST(0 AS BIT)
+                    ELSE CAST(1 AS BIT)
+                END AS is_fallback
+
+            FROM dbo.pois AS p
+
+            OUTER APPLY
+            (
+                /*
+                Tìm một bản dịch phù hợp nhất cho từng POI.
+
+                TOP 1 kết hợp ORDER BY sẽ ưu tiên:
+                - Ngôn ngữ khách yêu cầu.
+                - Sau đó là tiếng Anh.
+                - Cuối cùng là tiếng Việt.
+                */
+                SELECT TOP 1
+                    t.language_code,
+                    t.title,
+                    t.narration_text,
+                    t.audio_url
+                FROM dbo.translations AS t
+                WHERE t.poi_id = p.id
+                  AND t.is_active = 1
+                  AND t.language_code IN
+                  (
+                      :requested_language_code,
+                      'en',
+                      'vi'
+                  )
+                ORDER BY
+                    CASE
+                        WHEN t.language_code
+                             = :requested_language_code
+                        THEN 1
+                        WHEN t.language_code = 'en'
+                        THEN 2
+                        WHEN t.language_code = 'vi'
+                        THEN 3
+                        ELSE 4
+                    END
+            ) AS selected_translation
+
+            WHERE p.is_active = 1
+
+              /*
+              Nếu POI không có cả ngôn ngữ yêu cầu,
+              tiếng Anh lẫn tiếng Việt thì không trả POI đó.
+              */
+              AND selected_translation.language_code IS NOT NULL
+
+            ORDER BY p.id
+            """
+        )
+
+        with engine.connect() as connection:
+            rows = connection.execute(
+                query,
+                {
+                    "requested_language_code":
+                        requested_language_code,
+                },
+            ).mappings().all()
+
+        guides = []
+
+        for row in rows:
+            guide = dict(row)
+
+            # SQL Server trả BIT; chuyển về bool Python
+            # để FastAPI xuất true/false đúng chuẩn JSON.
+            guide["is_fallback"] = bool(
+                guide["is_fallback"]
+            )
+
+            guides.append(guide)
+
+        return guides        
 translation_repository = TranslationRepository()
