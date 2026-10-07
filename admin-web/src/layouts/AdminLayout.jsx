@@ -3,13 +3,20 @@ import {
     Outlet,
     useNavigate,
 } from "react-router-dom";
+import {
+    clearSession,
+    getRoleLabel,
+    getSession,
+} from "../services/auth";
 import "./AdminLayout.css";
 
 function AdminLayout() {
     const navigate = useNavigate();
+    const session = getSession();
+    const roleLabel = getRoleLabel(session?.role);
 
     const handleLogout = () => {
-        localStorage.removeItem("access_token");
+        clearSession();
         navigate("/login", { replace: true });
     };
 
@@ -17,16 +24,13 @@ function AdminLayout() {
         <div className="admin-layout">
             <aside className="admin-sidebar">
                 <div className="sidebar-brand">
-                    <span className="sidebar-logo">M</span>
-
                     <div>
-                        <strong>Museum Guide</strong>
-                        <small>Admin Portal</small>
+                        <strong>Thuyết minh địa điểm</strong>
+                        <small>{roleLabel}</small>
                     </div>
                 </div>
 
                 <nav className="sidebar-navigation">
-                    <p>QUẢN LÝ</p>
 
                     <NavLink
                         to="/dashboard"
@@ -53,10 +57,29 @@ function AdminLayout() {
                         Bản dịch
                     </NavLink>
 
-                    <div className="nav-item disabled">
-                        <span>♪</span>
-                        Âm thanh
-                    </div>
+                    {session?.role === "SYSTEM_ADMIN" && (
+                        <NavLink
+                            to="/shop-owners"
+                            className={({ isActive }) =>
+                                isActive ? "nav-item active" : "nav-item"
+                            }
+                        >
+                            <span>♙</span>
+                            Quản lý chủ quán
+                        </NavLink>
+                    )}
+
+                    {session?.role === "SHOP_OWNER" && (
+                        <NavLink
+                            to="/profile"
+                            className={({ isActive }) =>
+                                isActive ? "nav-item active" : "nav-item"
+                            }
+                        >
+                            <span>◎</span>
+                            Thông tin cá nhân
+                        </NavLink>
+                    )}
                 </nav>
 
                 <button
@@ -71,16 +94,16 @@ function AdminLayout() {
             <div className="admin-content">
                 <header className="admin-header">
                     <div>
-                        <span>Hệ thống quản trị</span>
                     </div>
 
                     <div className="admin-account">
-                        <span className="admin-avatar">A</span>
-
                         <div>
-                            <strong>Administrator</strong>
-                            <small>Quản trị viên</small>
+                            <strong>{session?.username}</strong>
+                            <small>{roleLabel}</small>
                         </div>
+                        <span className="admin-avatar">
+                            {session?.username?.charAt(0).toUpperCase() || "M"}
+                        </span>
                     </div>
                 </header>
 

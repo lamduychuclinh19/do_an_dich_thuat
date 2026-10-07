@@ -1,7 +1,18 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import {
+  clearSession,
+  isBackOfficeRole,
+  saveSession,
+} from "../services/auth";
 import "./LoginPage.css";
+
+// SQL Server lưu trạng thái hoạt động bằng BIT (0 hoặc 1).
+// Hàm này cũng chấp nhận chuỗi "0" và boolean false để tránh lệch kiểu
+// dữ liệu giữa database, FastAPI và React.
+const isInactiveAccount = (value) =>
+  value === 0 || value === "0" || value === false;
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -23,17 +34,55 @@ function LoginPage() {
         password,
       });
 
-      localStorage.setItem(
-        "access_token",
-        response.data.access_token
-      );
+      const session = saveSession(response.data.access_token);
+      const accountStatus =
+        response.data.is_active ?? session?.is_active;
 
-      navigate("/dashboard");
+      // Không cho vào trang quản trị nếu API hoặc JWT cho biết
+      // is_active = 0 (tài khoản đã bị khóa).
+      if (isInactiveAccount(accountStatus)) {
+        clearSession();
+        setErrorMessage(
+          "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên."
+        );
+        return;
+      }
+
+      if (!session || !isBackOfficeRole(session.role)) {
+        clearSession();
+        setErrorMessage(
+          "Tài khoản này không được sử dụng trang quản trị."
+        );
+        return;
+      }
+
+      navigate("/dashboard", { replace: true });
     } catch (error) {
-      if (error.response?.status === 401) {
+      const statusCode = error.response?.status;
+      const serverDetail = error.response?.data?.detail;
+      const normalizedDetail =
+        typeof serverDetail === "string"
+          ? serverDetail.toLowerCase()
+          : "";
+
+      // Tài khoản bị khóa phải có thông báo riêng, không được hiển thị
+      // nhầm thành lỗi username hoặc mật khẩu.
+      if (
+        statusCode === 403 ||
+        normalizedDetail.includes("khóa") ||
+        normalizedDetail.includes("khoá")
+      ) {
+        setErrorMessage(
+          typeof serverDetail === "string"
+            ? serverDetail
+            : "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên."
+        );
+      } else if (statusCode === 401) {
         setErrorMessage(
           "Tên đăng nhập hoặc mật khẩu không chính xác."
         );
+      } else if (typeof serverDetail === "string") {
+        setErrorMessage(serverDetail);
       } else {
         setErrorMessage(
           "Không thể kết nối đến máy chủ FastAPI."
@@ -48,8 +97,6 @@ function LoginPage() {
     <main className="login-page">
       <section className="login-introduction">
         <div className="brand">
-          <span className="brand-icon">M</span>
-          <span>Museum Guide</span>
         </div>
 
         <div className="introduction-content">
@@ -58,19 +105,12 @@ function LoginPage() {
           </p>
 
           <h1>
-            Quản lý nội dung
-            <br />
-            thuyết minh bảo tàng
+            Thuyết minh địa điểm
           </h1>
-
-          <p>
-            Quản lý địa điểm, bản dịch đa ngôn ngữ và nội
-            dung âm thanh trên cùng một hệ thống.
-          </p>
         </div>
 
         <p className="copyright">
-          © 2026 Museum Guide
+          © 2026 Thuyết minh địa điểm
         </p>
       </section>
 
@@ -78,10 +118,7 @@ function LoginPage() {
         <form className="login-card" onSubmit={handleSubmit}>
           <div className="login-heading">
             <p>Chào mừng trở lại</p>
-            <h2>Đăng nhập Admin</h2>
-            <span>
-              Nhập tài khoản quản trị để tiếp tục
-            </span>
+            <h2>Đăng nhập quản trị</h2>
           </div>
 
           <label htmlFor="username">

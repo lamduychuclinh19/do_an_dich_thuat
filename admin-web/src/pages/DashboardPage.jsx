@@ -35,10 +35,7 @@ function DashboardPage() {
             <div className="dashboard-heading">
                 <div>
                     <p>TỔNG QUAN</p>
-                    <h1>Dashboard</h1>
-                    <span>
-                        Theo dõi nội dung thuyết minh bảo tàng
-                    </span>
+                    <h1>Địa điểm</h1>
                 </div>
 
                 <div className="current-date">

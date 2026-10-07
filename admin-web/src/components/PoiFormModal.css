@@ -60,6 +60,7 @@
 }
 
 .poi-form-modal input,
+.poi-form-modal select,
 .poi-form-modal textarea {
   width: 100%;
   padding: 12px 14px;
@@ -72,6 +73,7 @@
 }
 
 .poi-form-modal input:focus,
+.poi-form-modal select:focus,
 .poi-form-modal textarea:focus {
   border-color: #a9823c;
   box-shadow: 0 0 0 4px rgba(169, 130, 60, 0.12);
@@ -155,3 +157,14 @@
     gap: 0;
   }
 }
+
+.owner-select-note {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #805c20;
+  background: #fff7e6;
+  font-size: 12px;
+  line-height: 1.5;
+}
+

@@ -23,7 +23,6 @@ function TranslationPage() {
         useState(null);
     const [errorMessage, setErrorMessage] = useState("");
     const [isFormOpen, setIsFormOpen] = useState(false);
-    const [editingTranslation, setEditingTranslation] = useState(null);
 
     useEffect(() => {
         const loadPois = async () => {
@@ -53,7 +52,6 @@ function TranslationPage() {
 
     useEffect(() => {
         if (!selectedPoiId) {
-            setTranslations([]);
             return;
         }
 
@@ -135,59 +133,33 @@ function TranslationPage() {
     const selectedPoi = pois.find(
         (poi) => String(poi.id) === selectedPoiId
     );
-    const handleOpenCreate = () => {
-        setEditingTranslation(null);
-        setIsFormOpen(true);
-    };
-
-    const handleOpenEdit = (translation) => {
-        setEditingTranslation(translation);
+    const handleOpenSourceForm = () => {
         setIsFormOpen(true);
     };
 
     const handleCloseForm = () => {
         setIsFormOpen(false);
-        setEditingTranslation(null);
     };
 
-    const handleTranslationSaved = (
-        savedTranslation
-    ) => {
-        setTranslations((currentTranslations) => {
-            const alreadyExists = currentTranslations.some(
-                (translation) =>
-                    translation.id === savedTranslation.id
-            );
-
-            if (alreadyExists) {
-                return currentTranslations.map(
-                    (translation) =>
-                        translation.id === savedTranslation.id
-                            ? savedTranslation
-                            : translation
-                );
-            }
-
-            return [
-                savedTranslation,
-                ...currentTranslations,
-            ];
-        });
+    const handleTranslationsSaved = (savedTranslations) => {
+        // Luồng mới luôn trả về cả bộ năm ngôn ngữ sau khi tạo/cập nhật.
+        setTranslations(
+            Array.isArray(savedTranslations)
+                ? savedTranslations
+                : [savedTranslations]
+        );
     };
 
-    const existingLanguages = translations.map(
-        (translation) => translation.language_code
+    const sourceTranslation = translations.find(
+        (translation) => translation.language_code === "vi"
     );
+    const hasTranslations = translations.length > 0;
     return (
         <div className="translation-page">
             <div className="translation-heading">
                 <div>
                     <p>QUẢN LÝ NỘI DUNG</p>
                     <h1>Bản dịch đa ngôn ngữ</h1>
-                    <span>
-                        Quản lý nội dung thuyết minh và âm thanh
-                        của từng địa điểm
-                    </span>
                 </div>
 
                 <div className="translation-heading-actions">
@@ -199,19 +171,19 @@ function TranslationPage() {
                     <button
                         type="button"
                         className="add-translation-button"
-                        onClick={handleOpenCreate}
-                        disabled={
-                            !selectedPoiId || translations.length >= 5
-                        }
+                        onClick={handleOpenSourceForm}
+                        disabled={!selectedPoiId || isLoadingTranslations}
                     >
-                        + Thêm bản dịch
+                        {hasTranslations
+                            ? "Sửa nội dung"
+                            : "Tạo audio"}
                     </button>
                 </div>
             </div>
 
             <section className="poi-selector-panel">
                 <label htmlFor="translation-poi">
-                    Chọn địa điểm POI
+                    Chọn địa điểm
                 </label>
 
                 <select
@@ -261,7 +233,7 @@ function TranslationPage() {
                     </div>
                 ) : translations.length === 0 ? (
                     <div className="translation-empty">
-                        POI này chưa có bản dịch nào.
+                        Địa điểm này  chưa có bản dịch nào.
                     </div>
                 ) : (
                     translations.map((translation) => (
@@ -321,16 +293,6 @@ function TranslationPage() {
                                 </span>
                                 <button
                                     type="button"
-                                    className="edit-translation-button"
-                                    onClick={() =>
-                                        handleOpenEdit(translation)
-                                    }
-                                >
-                                    Sửa nội dung
-                                </button>
-
-                                <button
-                                    type="button"
                                     className={
                                         translation.is_active
                                             ? "translation-visibility hide"
@@ -356,14 +318,16 @@ function TranslationPage() {
                     ))
                 )}
             </section>
-            <TranslationFormModal
-                isOpen={isFormOpen}
-                poiId={selectedPoiId}
-                editingTranslation={editingTranslation}
-                existingLanguages={existingLanguages}
-                onClose={handleCloseForm}
-                onSaved={handleTranslationSaved}
-            />
+            {isFormOpen && (
+                <TranslationFormModal
+                    isOpen={isFormOpen}
+                    poiId={selectedPoiId}
+                    sourceTranslation={sourceTranslation}
+                    hasTranslations={hasTranslations}
+                    onClose={handleCloseForm}
+                    onSaved={handleTranslationsSaved}
+                />
+            )}
         </div>
     );
 }

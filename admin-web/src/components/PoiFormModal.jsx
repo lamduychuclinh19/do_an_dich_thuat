@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import api from "../services/api";
 import "./PoiFormModal.css";
 
 const emptyForm = {
+  id: "",
+  owner_id: "",
   name: "",
   description: "",
   address: "",
@@ -11,37 +13,53 @@ const emptyForm = {
   trigger_radius_meters: 2,
 };
 
+function getInitialForm(editingPoi) {
+  if (!editingPoi) {
+    return emptyForm;
+  }
+
+  return {
+    id: editingPoi.id ?? "",
+    owner_id: editingPoi.owner_id ?? "",
+    name: editingPoi.name ?? "",
+    description: editingPoi.description ?? "",
+    address: editingPoi.address ?? "",
+    latitude: editingPoi.latitude ?? "",
+    longitude: editingPoi.longitude ?? "",
+    trigger_radius_meters:
+      editingPoi.trigger_radius_meters ?? 2,
+  };
+}
+
+function getOwnerOptionLabel(owner) {
+  const displayName = owner.full_name || owner.username;
+  const username =
+    owner.full_name && owner.username
+      ? ` (${owner.username})`
+      : "";
+  const phone = owner.phone
+    ? ` — ${owner.phone}`
+    : "";
+
+  return `#${owner.id} — ${displayName}${username}${phone}`;
+}
+
 function PoiFormModal({
   isOpen,
   editingPoi,
+  isSystemAdmin,
+  shopOwners,
   onClose,
   onSaved,
 }) {
-  const [formData, setFormData] = useState(emptyForm);
+  // Modal được unmount sau mỗi lần đóng nên state khởi tạo luôn phản ánh
+  // đúng POI đang sửa mà không cần đồng bộ bằng useEffect.
+  const [formData, setFormData] = useState(() =>
+    getInitialForm(editingPoi)
+  );
   const [errorMessage, setErrorMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    if (editingPoi) {
-      setFormData({
-        name: editingPoi.name ?? "",
-        description: editingPoi.description ?? "",
-        address: editingPoi.address ?? "",
-        latitude: editingPoi.latitude ?? "",
-        longitude: editingPoi.longitude ?? "",
-        trigger_radius_meters:
-          editingPoi.trigger_radius_meters ?? 2,
-      });
-    } else {
-      setFormData(emptyForm);
-    }
-
-    setErrorMessage("");
-  }, [isOpen, editingPoi]);
+  const [ownerSearch, setOwnerSearch] = useState("");
 
   if (!isOpen) {
     return null;
@@ -53,6 +71,45 @@ function PoiFormModal({
     setFormData((currentData) => ({
       ...currentData,
       [name]: value,
+    }));
+  };
+
+  const handleOwnerSearchChange = (event) => {
+    const searchValue = event.target.value;
+    const normalizedValue = searchValue
+      .trim()
+      .toLocaleLowerCase("vi");
+
+    // Khi quản trị viên chọn một gợi ý, lưu ID thật của chủ quán.
+    // Nếu họ mới chỉ nhập một phần nội dung thì chưa gửi owner_id.
+    const selectedOwner = shopOwners.find((owner) => {
+      const ownerId = String(owner.id).toLocaleLowerCase("vi");
+      const fullName = String(
+        owner.full_name || ""
+      ).toLocaleLowerCase("vi");
+      const username = String(
+        owner.username || ""
+      ).toLocaleLowerCase("vi");
+      const phone = String(
+        owner.phone || ""
+      ).toLocaleLowerCase("vi");
+      const optionLabel = getOwnerOptionLabel(owner)
+        .toLocaleLowerCase("vi");
+
+      return (
+        normalizedValue === optionLabel ||
+        normalizedValue === ownerId ||
+        normalizedValue === `#${ownerId}` ||
+        normalizedValue === fullName ||
+        normalizedValue === username ||
+        normalizedValue === phone
+      );
+    });
+
+    setOwnerSearch(searchValue);
+    setFormData((currentData) => ({
+      ...currentData,
+      owner_id: selectedOwner?.id ?? "",
     }));
   };
 
@@ -69,6 +126,18 @@ function PoiFormModal({
         formData.trigger_radius_meters
       ),
     };
+
+    // SHOP_OWNER tự đặt mã POI khi tạo mới. Mã này không được đổi lại
+    // trong chức năng cập nhật địa điểm.
+    if (!editingPoi && !isSystemAdmin) {
+      payload.id = Number(formData.id);
+    }
+
+    // Khi SYSTEM_ADMIN tạo POI, backend cần biết POI thuộc chủ quán nào.
+    // SHOP_OWNER không gửi owner_id vì backend tự lấy từ JWT.
+    if (!editingPoi && isSystemAdmin) {
+      payload.owner_id = Number(formData.owner_id);
+    }
 
     try {
       setIsSaving(true);
@@ -91,7 +160,11 @@ function PoiFormModal({
       onSaved(response.data);
       onClose();
     } catch (error) {
-      if (error.response?.status === 422) {
+      const serverDetail = error.response?.data?.detail;
+
+      if (typeof serverDetail === "string") {
+        setErrorMessage(serverDetail);
+      } else if (error.response?.status === 422) {
         setErrorMessage(
           "Dữ liệu chưa hợp lệ. Hãy kiểm tra lại các trường."
         );
@@ -136,8 +209,8 @@ function PoiFormModal({
 
             <h2>
               {editingPoi
-                ? "Chỉnh sửa POI"
-                : "Thêm địa điểm POI"}
+                ? "Chỉnh sửa"
+                : "Thêm"}
             </h2>
           </div>
 
@@ -152,6 +225,78 @@ function PoiFormModal({
         </div>
 
         <form onSubmit={handleSubmit}>
+          {!editingPoi && !isSystemAdmin && (
+            <>
+              <label htmlFor="poi-id">
+                Mã địa điểm
+              </label>
+
+              <input
+                id="poi-id"
+                name="id"
+                type="text"
+                value={formData.id}
+                onChange={handleChange}
+                placeholder="Ví dụ: BNR01"
+                required
+              />
+            </>
+          )}
+
+          {!editingPoi && isSystemAdmin && (
+            <>
+              <label htmlFor="poi-id">
+                Mã địa điểm
+              </label>
+
+              <input
+                id="poi-id"
+                name="id"
+                type="text"
+                value={formData.id}
+                onChange={handleChange}
+                placeholder="Ví dụ: BNR01"
+                required
+              />
+              <label htmlFor="poi-owner">
+                Chủ quán sở hữu địa điểm
+              </label>
+
+              <input
+                id="poi-owner"
+                type="search"
+                list="shop-owner-options"
+                value={ownerSearch}
+                onChange={handleOwnerSearchChange}
+                placeholder="Gõ tên, SĐT hoặc mã chủ quán"
+                autoComplete="off"
+                required
+              />
+
+              <datalist id="shop-owner-options">
+                {shopOwners.map((owner) => (
+                  <option
+                    key={owner.id}
+                    value={getOwnerOptionLabel(owner)}
+                  />
+                ))}
+              </datalist>
+
+              {ownerSearch && !formData.owner_id && (
+                <p className="owner-select-note">
+                  Hãy chọn đúng một chủ quán trong danh sách gợi ý.
+                </p>
+              )}
+
+              {shopOwners.length === 0 && (
+                <p className="owner-select-note">
+                  Chưa có tài khoản SHOP_OWNER đang hoạt động. Hãy tạo hoặc
+                  mở khóa chủ quán trước khi thêm địa điểm.
+                </p>
+              )}
+            </>
+          )}
+
           <label htmlFor="poi-name">
             Tên địa điểm
           </label>
@@ -271,7 +416,15 @@ function PoiFormModal({
             <button
               type="submit"
               className="save-button"
-              disabled={isSaving}
+              disabled={
+                isSaving ||
+                (!editingPoi &&
+                  isSystemAdmin &&
+                  !formData.owner_id) ||
+                (!editingPoi &&
+                  !isSystemAdmin &&
+                  !formData.id)
+              }
             >
               {isSaving
                 ? "Đang lưu..."
