@@ -45,7 +45,7 @@ function ShopOwnerPage() {
       const normalizedKeyword = keyword.trim();
 
       if (normalizedKeyword) {
-        // Backend dùng cùng một keyword để tìm tên quán hoặc SĐT.
+        // Backend dùng cùng một keyword để tìm tên quán hoặc Số điện thoại.
         params.keyword = normalizedKeyword;
       }
 
@@ -180,13 +180,6 @@ function ShopOwnerPage() {
             <strong>{shopOwners.length}</strong>
             <span>chủ quán</span>
           </div>
-          <button
-            type="button"
-            className="add-owner-button"
-            onClick={() => setIsCreateOpen(true)}
-          >
-            Thêm
-          </button>
         </div>
       </div>
 
@@ -231,6 +224,7 @@ function ShopOwnerPage() {
                 <th>Trạng thái</th>
                 <th>Lần đăng nhập cuối</th>
                 <th>Ngày tạo</th>
+                <th>Thao tác</th>
               </tr>
             </thead>
 
@@ -263,7 +257,7 @@ function ShopOwnerPage() {
                     
                     <td>
                       <div className="owner-contact">
-                        <span>{owner.phone || "Chưa có SĐT"}</span>
+                        <span>{owner.phone || "Chưa có Số điện thoại"}</span>
                         <small>{owner.email || "Chưa có email"}</small>
                       </div>
                     </td>

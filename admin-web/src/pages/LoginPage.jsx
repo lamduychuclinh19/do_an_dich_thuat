@@ -162,6 +162,9 @@ function LoginPage() {
           <button type="submit" disabled={isLoading}>
             {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
           </button>
+          <a className="owner-signup-link" href="/owner-signup">
+            Bạn chưa có tài khoản? Đăng ký tài khoản
+          </a>
         </form>
       </section>
     </main>

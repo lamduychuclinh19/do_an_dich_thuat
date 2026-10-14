@@ -35,7 +35,7 @@ class TranslationRepository:
 
     def get_by_poi_and_language(
         self,
-        poi_id: int,
+        poi_id: str,
         language_code: str,
     ) -> dict | None:
         """Public chỉ lấy bản dịch đang hoạt động."""
@@ -60,7 +60,7 @@ class TranslationRepository:
 
         return self._row_to_dict(row)
 
-    def get_all_by_poi(self, poi_id: int) -> list[dict]:
+    def get_all_by_poi(self, poi_id: str) -> list[dict]:
         """Public chỉ thấy các ngôn ngữ đang hoạt động."""
         query = text(
             f"""
@@ -131,7 +131,7 @@ class TranslationRepository:
 
     def get_all_for_owner_by_poi(
         self,
-        poi_id: int,
+        poi_id: str,
         owner_id: int,
     ) -> list[dict]:
         """SHOP_OWNER thấy cả bản dịch đang hiện và đang ẩn của POI mình."""
@@ -160,7 +160,7 @@ class TranslationRepository:
 
     def get_all_for_system_admin_by_poi(
         self,
-        poi_id: int,
+        poi_id: str,
     ) -> list[dict]:
         """SYSTEM_ADMIN thấy cả bản dịch đang hiện và đang ẩn của POI."""
         query = text(
@@ -257,7 +257,7 @@ class TranslationRepository:
         self,
         records: list[dict],
     ) -> list[dict] | None:
-        """SYSTEM_ADMIN tạo năm bản dịch cho một POI bất kỳ.
+        """SYSTEM_ADMIN tạo năm bản dịch cho một địa điểm bất kỳ.
 
         Repository vẫn kiểm tra POI tồn tại trước khi INSERT để tránh tạo
         nội dung mồ côi nếu client gửi một ``poi_id`` không hợp lệ.

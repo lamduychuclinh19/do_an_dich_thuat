@@ -1,22 +1,23 @@
-import { Navigate, Outlet } from "react-router-dom";
-import {
-  getSession,
-  isBackOfficeRole,
-} from "../services/auth";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { getSession, isBackOfficeRole } from "../services/auth";
 
 function ProtectedRoute({ allowedRoles }) {
   const session = getSession();
+  const location = useLocation();
 
+  // Không có session hợp lệ (hoặc token đã hết hạn) thì bắt buộc đăng nhập.
   if (!session || !isBackOfficeRole(session.role)) {
-    return <Navigate to="/login" replace />;
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: location.pathname }}
+      />
+    );
   }
 
-  // Đây là lớp bảo vệ giao diện. Backend vẫn tiếp tục kiểm tra role ở mỗi
-  // API nên người dùng không thể vượt quyền chỉ bằng cách sửa React/URL.
-  if (
-    allowedRoles &&
-    !allowedRoles.includes(session.role)
-  ) {
+  // Chặn người dùng có đăng nhập nhưng không đúng vai trò.
+  if (allowedRoles && !allowedRoles.includes(session.role)) {
     return <Navigate to="/dashboard" replace />;
   }
 

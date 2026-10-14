@@ -1,5 +1,6 @@
 import { useState } from "react";
 import api from "../services/api";
+import { getSession } from "../services/auth";
 import "./TranslationFormModal.css";
 
 const EMPTY_FORM = {
@@ -7,11 +8,114 @@ const EMPTY_FORM = {
   narration_text: "",
 };
 
+const FIELD_LABELS = {
+  poi_id: "Mã địa điểm",
+  title: "Tiêu đề tiếng Việt",
+  narration_text: "Nội dung thuyết minh tiếng Việt",
+  text_file: "File TXT",
+  file: "File TXT",
+};
+
+function validateForm(formData, sourceMode, textFile, poiId) {
+  const errors = {};
+  const normalizedPoiId = String(poiId ?? "").trim();
+  const title = formData.title.trim();
+  const narration = formData.narration_text.trim();
+
+  if (!normalizedPoiId) {
+    errors.poi_id = "Chưa chọn địa điểm cần tạo thuyết minh.";
+  } else if (normalizedPoiId.length > 10) {
+    errors.poi_id = "Mã địa điểm không được dài quá 10 ký tự.";
+  }
+
+  if (!title) {
+    errors.title = "Vui lòng nhập tiêu đề tiếng Việt.";
+  } else if (title.length > 200) {
+    errors.title = "Tiêu đề không được dài quá 200 ký tự.";
+  }
+
+  if (sourceMode === "text") {
+    if (!narration) {
+      errors.narration_text =
+        "Vui lòng nhập nội dung thuyết minh tiếng Việt.";
+    } else if (narration.length > 20_000) {
+      errors.narration_text =
+        "Nội dung không được dài quá 20.000 ký tự.";
+    }
+  } else if (!textFile) {
+    errors.text_file = "Vui lòng chọn một file TXT tiếng Việt.";
+  } else if (!textFile.name.toLocaleLowerCase("vi").endsWith(".txt")) {
+    errors.text_file = "File đã chọn phải có phần mở rộng .txt.";
+  }
+
+  return errors;
+}
+
+function getValidationMessage(validationError, fieldName) {
+  const label = FIELD_LABELS[fieldName] || "Dữ liệu";
+
+  if (
+    fieldName === "poi_id" &&
+    ["int_parsing", "int_type"].includes(validationError.type)
+  ) {
+    return (
+      "Mã địa điểm: backend vẫn đang yêu cầu số nguyên, trong khi " +
+      "mã POI hiện tại là chuỗi (ví dụ BNR001)."
+    );
+  }
+
+  switch (validationError.type) {
+    case "missing":
+      return `${label}: không được để trống.`;
+    case "string_type":
+      return `${label}: phải là chuỗi ký tự.`;
+    case "string_too_short":
+      return `${label}: không được để trống.`;
+    case "string_too_long":
+      return `${label}: vượt quá độ dài cho phép.`;
+    case "value_error":
+      return `${label}: ${validationError.msg || "giá trị không hợp lệ."}`;
+    default:
+      return `${label}: ${validationError.msg || "dữ liệu không hợp lệ."}`;
+  }
+}
+
+function parseFastApiValidationErrors(detail) {
+  if (!Array.isArray(detail)) {
+    return {};
+  }
+
+  return detail.reduce((errors, validationError) => {
+    const backendField = [...(validationError.loc || [])]
+      .reverse()
+      .find((location) => FIELD_LABELS[location]);
+
+    if (!backendField) {
+      return errors;
+    }
+
+    const formField = backendField === "file" ? "text_file" : backendField;
+
+    if (!errors[formField]) {
+      errors[formField] = getValidationMessage(
+        validationError,
+        backendField
+      );
+    }
+
+    return errors;
+  }, {});
+}
+
 function getApiErrorMessage(error, fallbackMessage) {
   const detail = error.response?.data?.detail;
 
   if (typeof detail === "string") {
     return detail;
+  }
+
+  if (!error.response) {
+    return "Không nhận được phản hồi từ backend. Hãy kiểm tra FastAPI đang chạy.";
   }
 
   return fallbackMessage;
@@ -36,11 +140,13 @@ function TranslationFormModal({
   onClose,
   onSaved,
 }) {
+  const isShopOwner = getSession()?.role === "SHOP_OWNER";
   const [sourceMode, setSourceMode] = useState("text");
   const [formData, setFormData] = useState(() =>
     getInitialForm(sourceTranslation)
   );
   const [textFile, setTextFile] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
   const [errorMessage, setErrorMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -54,6 +160,48 @@ function TranslationFormModal({
       ...currentData,
       [name]: value,
     }));
+    setFieldErrors((currentErrors) => ({
+      ...currentErrors,
+      [name]: "",
+    }));
+    setErrorMessage("");
+  };
+
+  const focusFirstInvalidField = (errors) => {
+    const firstField = Object.keys(errors)[0];
+    const elementId = {
+      title: "translation-title",
+      narration_text: "translation-narration",
+      text_file: "translation-text-file",
+    }[firstField];
+
+    if (elementId) {
+      window.requestAnimationFrame(() => {
+        document.getElementById(elementId)?.focus();
+      });
+    }
+  };
+
+  const showValidationErrors = (errors) => {
+    setFieldErrors(errors);
+    setErrorMessage(Object.values(errors).join(" "));
+    focusFirstInvalidField(errors);
+  };
+
+  const renderFieldError = (fieldName) => {
+    if (!fieldErrors[fieldName]) {
+      return null;
+    }
+
+    return (
+      <p
+        id={`translation-${fieldName}-error`}
+        className="translation-field-error"
+        role="alert"
+      >
+        {fieldErrors[fieldName]}
+      </p>
+    );
   };
 
   const saveTypedText = () => {
@@ -72,7 +220,7 @@ function TranslationFormModal({
     return api.post(
       "/api/admin/translations/from-vietnamese",
       {
-        poi_id: Number(poiId),
+        poi_id: String(poiId).trim(),
         ...payload,
       }
     );
@@ -102,14 +250,46 @@ function TranslationFormModal({
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    if (sourceMode === "file" && !textFile) {
-      setErrorMessage("Hãy chọn một file TXT tiếng Việt.");
+    const clientErrors = validateForm(
+      formData,
+      sourceMode,
+      textFile,
+      poiId
+    );
+
+    if (Object.keys(clientErrors).length > 0) {
+      showValidationErrors(clientErrors);
       return;
     }
 
     try {
       setIsSaving(true);
       setErrorMessage("");
+      setFieldErrors({});
+
+      if (isShopOwner) {
+        const action = hasTranslations ? "cập nhật" : "tạo mới";
+        if (!window.confirm(`Cậu chắc chắn muốn gửi yêu cầu ${action} bản dịch để admin xét duyệt chứ?`)) {
+          return;
+        }
+        const narrationText = sourceMode === "file"
+          ? await textFile.text()
+          : formData.narration_text.trim();
+        await api.post("/api/content-requests", {
+          request_type: "TRANSLATION",
+          action: hasTranslations ? "UPDATE" : "CREATE",
+          target_poi_id: String(poiId),
+          details: {
+            poi_id: String(poiId),
+            title: formData.title.trim(),
+            narration_text: narrationText.trim(),
+          },
+        });
+        window.alert("Đã gửi yêu cầu. Bản dịch chỉ được cập nhật sau khi admin đồng ý.");
+        window.dispatchEvent(new Event("owner-content-requests-updated"));
+        onClose();
+        return;
+      }
 
       const response =
         sourceMode === "file"
@@ -122,17 +302,33 @@ function TranslationFormModal({
     } catch (error) {
       if (error.response?.status === 409) {
         setErrorMessage(
-          "Địa điểm này  đã có nội dung thuyết minh. Hãy dùng chức năng cập nhật."
+          "Địa điểm này đã có nội dung thuyết minh. Hãy dùng chức năng cập nhật."
         );
       } else if (error.response?.status === 422) {
-        setErrorMessage(
-          "Dữ liệu chưa hợp lệ. Hãy kiểm tra tiêu đề và nội dung tiếng Việt."
+        const serverFieldErrors = parseFastApiValidationErrors(
+          error.response?.data?.detail
         );
+
+        if (Object.keys(serverFieldErrors).length > 0) {
+          showValidationErrors(serverFieldErrors);
+        } else {
+          const detail = error.response?.data?.detail;
+          setErrorMessage(
+            Array.isArray(detail)
+              ? detail
+                  .map((item) => item.msg)
+                  .filter(Boolean)
+                  .join("; ")
+              : "Backend từ chối dữ liệu nhưng không cho biết trường bị lỗi."
+          );
+        }
       } else {
         setErrorMessage(
           getApiErrorMessage(
             error,
-            "Không thể tạo bản dịch hoặc audio. Hãy kiểm tra backend và Ollama."
+            isShopOwner
+              ? "Không thể gửi yêu cầu đến admin. Hãy thử lại."
+              : "Không thể tạo bản dịch hoặc audio. Hãy kiểm tra backend và Ollama."
           )
         );
       }
@@ -183,7 +379,11 @@ function TranslationFormModal({
           <button
             type="button"
             className={sourceMode === "text" ? "active" : ""}
-            onClick={() => setSourceMode("text")}
+            onClick={() => {
+              setSourceMode("text");
+              setFieldErrors({});
+              setErrorMessage("");
+            }}
             disabled={isSaving}
           >
             Nhập nội dung
@@ -191,14 +391,18 @@ function TranslationFormModal({
           <button
             type="button"
             className={sourceMode === "file" ? "active" : ""}
-            onClick={() => setSourceMode("file")}
+            onClick={() => {
+              setSourceMode("file");
+              setFieldErrors({});
+              setErrorMessage("");
+            }}
             disabled={isSaving}
           >
             Tải file TXT
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate>
           <label htmlFor="translation-title">Tiêu đề tiếng Việt</label>
           <input
             id="translation-title"
@@ -207,8 +411,16 @@ function TranslationFormModal({
             onChange={handleChange}
             placeholder="Ví dụ: Lịch sử Bến Nhà Rồng"
             maxLength="200"
+            aria-invalid={Boolean(fieldErrors.title)}
+            aria-describedby={
+              fieldErrors.title
+                ? "translation-title-error"
+                : undefined
+            }
             required
           />
+
+          {renderFieldError("title")}
 
           {sourceMode === "text" ? (
             <>
@@ -223,8 +435,15 @@ function TranslationFormModal({
                 placeholder="Nhập nội dung nguồn bằng tiếng Việt..."
                 rows="9"
                 maxLength="20000"
+                aria-invalid={Boolean(fieldErrors.narration_text)}
+                aria-describedby={
+                  fieldErrors.narration_text
+                    ? "translation-narration_text-error"
+                    : undefined
+                }
                 required
               />
+              {renderFieldError("narration_text")}
               <div className="character-count">
                 {formData.narration_text.length}/20.000 ký tự
               </div>
@@ -238,11 +457,23 @@ function TranslationFormModal({
                 id="translation-text-file"
                 type="file"
                 accept=".txt,text/plain"
-                onChange={(event) =>
-                  setTextFile(event.target.files?.[0] || null)
+                onChange={(event) => {
+                  setTextFile(event.target.files?.[0] || null);
+                  setFieldErrors((currentErrors) => ({
+                    ...currentErrors,
+                    text_file: "",
+                  }));
+                  setErrorMessage("");
+                }}
+                aria-invalid={Boolean(fieldErrors.text_file)}
+                aria-describedby={
+                  fieldErrors.text_file
+                    ? "translation-text_file-error"
+                    : undefined
                 }
                 required
               />
+              {renderFieldError("text_file")}
               <p className="text-file-note">
                 Chỉ nhận file .txt. Khi cập nhật, nội dung trong file sẽ thay
                 thế nguồn cũ và hệ thống tạo lại toàn bộ 5 audio.
@@ -272,10 +503,12 @@ function TranslationFormModal({
               disabled={isSaving}
             >
               {isSaving
-                ? "Đang tạo "
+                ? (isShopOwner ? "Đang gửi yêu cầu..." : "Đang lưu...")
+                : isShopOwner
+                  ? "Gửi yêu cầu"
                 : hasTranslations
                   ? "Cập nhật"
-                  : "Tạo 5 bản dịch và audio"}
+                  : "Tạo"}
             </button>
           </div>
         </form>

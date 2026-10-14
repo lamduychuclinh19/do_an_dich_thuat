@@ -72,7 +72,7 @@ class TranslationService:
 
     def _get_poi_for_back_office(
         self,
-        poi_id: int,
+        poi_id: str,
         current_person: dict,
     ) -> dict:
         """SYSTEM_ADMIN thấy mọi POI; SHOP_OWNER chỉ thấy POI của mình."""
@@ -93,7 +93,7 @@ class TranslationService:
 
     def _get_records_for_back_office(
         self,
-        poi_id: int,
+        poi_id: str,
         current_person: dict,
     ) -> list[dict]:
         """Lấy cả bản dịch hiện/ẩn theo đúng phạm vi quyền của tài khoản."""
@@ -348,7 +348,7 @@ class TranslationService:
 
     async def _build_five_records(
         self,
-        poi_id: int,
+        poi_id: str,
         title_vi: str,
         narration_vi: str,
     ) -> tuple[list[dict], list[str]]:
@@ -425,7 +425,7 @@ class TranslationService:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=(
-                    "Địa điểm này  đã có nội dung thuyết minh. "
+                    "Địa điểm này đã có nội dung thuyết minh. "
                     "Hãy dùng chức năng cập nhật thay vì tạo mới."
                 ),
             )
@@ -459,7 +459,7 @@ class TranslationService:
 
     async def create_from_vietnamese_text_file(
         self,
-        poi_id: int,
+        poi_id: str,
         title: str,
         text_file: UploadFile,
         owner_id: int,
@@ -476,7 +476,7 @@ class TranslationService:
 
     async def create_from_vietnamese_text_file_for_back_office(
         self,
-        poi_id: int,
+        poi_id: str,
         title: str,
         text_file: UploadFile,
         current_person: dict,
@@ -494,7 +494,7 @@ class TranslationService:
 
     async def update_vietnamese_source(
         self,
-        poi_id: int,
+        poi_id: str,
         data: TranslationSourceUpdate,
         owner_id: int,
     ) -> list[dict]:
@@ -510,7 +510,7 @@ class TranslationService:
 
     async def update_vietnamese_source_for_back_office(
         self,
-        poi_id: int,
+        poi_id: str,
         data: TranslationSourceUpdate,
         current_person: dict,
     ) -> list[dict]:
@@ -574,7 +574,7 @@ class TranslationService:
 
     async def update_vietnamese_source_from_text_file(
         self,
-        poi_id: int,
+        poi_id: str,
         text_file: UploadFile,
         owner_id: int,
         title: str | None = None,
@@ -591,7 +591,7 @@ class TranslationService:
 
     async def update_vietnamese_source_from_text_file_for_back_office(
         self,
-        poi_id: int,
+        poi_id: str,
         text_file: UploadFile,
         current_person: dict,
         title: str | None = None,
@@ -607,7 +607,7 @@ class TranslationService:
             current_person=current_person,
         )
 
-    def get_translation(self, poi_id: int, language_code: str) -> dict:
+    def get_translation(self, poi_id: str, language_code: str) -> dict:
         """Public chỉ nhận nội dung khi cả POI và bản dịch đều đang hiện."""
         poi = poi_repository.get_by_id(poi_id)
         if poi is None or poi["is_active"] is False:
@@ -622,7 +622,7 @@ class TranslationService:
 
         return translation
 
-    def get_all_translations(self, poi_id: int) -> list[dict]:
+    def get_all_translations(self, poi_id: str) -> list[dict]:
         """Public chỉ nhận những ngôn ngữ đang hoạt động."""
         poi = poi_repository.get_by_id(poi_id)
         if poi is None or poi["is_active"] is False:
@@ -632,7 +632,7 @@ class TranslationService:
 
     def get_all_translations_for_owner(
         self,
-        poi_id: int,
+        poi_id: str,
         owner_id: int,
     ) -> list[dict]:
         """Hàm tương thích cũ: lấy nội dung của một SHOP_OWNER."""
@@ -646,7 +646,7 @@ class TranslationService:
 
     def get_all_translations_for_back_office(
         self,
-        poi_id: int,
+        poi_id: str,
         current_person: dict,
     ) -> list[dict]:
         """SYSTEM_ADMIN xem mọi POI; SHOP_OWNER chỉ xem POI của mình."""

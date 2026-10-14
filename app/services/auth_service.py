@@ -93,7 +93,9 @@ class AuthService:
             # Một hash bị hỏng trong database cũng không được làm API lỗi 500.
             password_is_valid = False
 
-
+        # Chỉ báo sai thông tin đăng nhập khi username hoặc mật khẩu sai.
+        # Kiểm tra mật khẩu trước khi báo trạng thái khóa để tránh người lạ
+        # dùng API dò xem một username có tồn tại hay không.
         if person is None or password_is_valid is False:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -209,7 +211,7 @@ class AuthService:
         # Vì vậy tài khoản vừa bị khóa sẽ mất quyền ngay ở request kế tiếp.
         if (
             person is None
-             or not is_active_account(person["is_active"])
+            or not is_active_account(person["is_active"])
             or person["role"] not in VALID_ROLES
             or person["role"] != token_role
             or person["username"] != token_username

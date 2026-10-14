@@ -6,9 +6,11 @@ from app.routers.admin_management_router import (
     router as admin_management_router,
 )
 from app.routers.admin_poi_router import router as admin_poi_router
+from app.routers.admin_owner_registration_router import router as admin_owner_registration_router
 from app.routers.admin_translation_router import (
     router as admin_translation_router,
 )
+from app.routers.content_request_router import router as content_request_router
 from app.routers.auth_router import router as auth_router
 from app.routers.guide_router import router as guide_router
 from app.routers.profile_router import router as profile_router
@@ -21,7 +23,7 @@ from app.services.audio_service import AUDIO_DIRECTORY
 
 app = FastAPI(
     title="Hệ thống thuyết minh đa ngôn ngữ",
-    version="2.0.0",
+    version="10.0.0",
 )
 
 # Cho phép giao diện React admin gọi API trong môi trường phát triển.
@@ -60,6 +62,8 @@ app.include_router(profile_router)
 
 # API quản lý tài khoản SHOP_OWNER, chỉ SYSTEM_ADMIN được phép dùng.
 app.include_router(admin_management_router)
+app.include_router(admin_owner_registration_router)
+app.include_router(content_request_router)
 
 
 @app.get("/health")

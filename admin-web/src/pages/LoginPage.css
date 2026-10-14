@@ -5,6 +5,14 @@
   background: #f7f5f0;
 }
 
+.owner-signup-link {
+  display: block;
+  margin-top: 14px;
+  text-align: center;
+  color: #26704b;
+  font-size: 14px;
+}
+
 .login-introduction {
   position: relative;
   display: flex;

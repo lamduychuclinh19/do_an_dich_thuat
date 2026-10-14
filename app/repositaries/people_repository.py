@@ -150,7 +150,7 @@ class PeopleRepository:
         is_active: bool | None = None,
         keyword: str | None = None,
     ):
-        """Lấy SHOP_OWNER, tìm theo tên quán/SĐT và lọc trạng thái."""
+        """Lấy SHOP_OWNER, tìm theo tên quán/Số điện thoại và lọc trạng thái."""
         conditions = ["p.role = 'SHOP_OWNER'"]
         parameters = {}
 

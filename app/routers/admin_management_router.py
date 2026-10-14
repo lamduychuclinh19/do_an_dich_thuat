@@ -32,7 +32,7 @@ def get_all_shop_owners(
     is_active: bool | None = None,
     current_admin: dict = Depends(require_system_admin),
 ):
-    """Tìm SHOP_OWNER theo tên quán/SĐT và lọc trạng thái."""
+    """Tìm SHOP_OWNER theo tên quán/Số điện thoại và lọc trạng thái."""
     return admin_management_service.get_all_shop_owners(
         current_admin=current_admin,
         keyword=keyword,

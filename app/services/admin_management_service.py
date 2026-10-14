@@ -65,7 +65,7 @@ class AdminManagementService:
         is_active: bool | None = None,
         keyword: str | None = None,
     ) -> list[dict]:
-        """Lấy SHOP_OWNER, tìm theo tên quán/SĐT và lọc trạng thái."""
+        """Lấy SHOP_OWNER, tìm theo tên quán/Số điện thoại và lọc trạng thái."""
         self._ensure_system_admin(current_admin)
 
         # phone_keyword được giữ tạm để router cũ vẫn hoạt động.

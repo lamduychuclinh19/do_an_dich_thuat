@@ -1,0 +1,152 @@
+.owner-signup {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 18px;
+  color: #40534f;
+  background: #f4f6f5;
+}
+
+.owner-signup-card {
+  box-sizing: border-box;
+  width: min(100%, 540px);
+  display: grid;
+  gap: 17px;
+  padding: 32px;
+  border: 1px solid #e0e6e4;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 25px rgba(20, 55, 49, 0.06);
+}
+
+.owner-signup-heading {
+  margin-bottom: 3px;
+}
+
+.owner-signup-heading p {
+  margin: 0 0 8px;
+  color: #a2772d;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.owner-signup-heading h1 {
+  margin: 0 0 8px;
+  color: #173c36;
+  font-size: 30px;
+}
+
+.owner-signup-heading span {
+  color: #778581;
+  line-height: 1.5;
+}
+
+.signup-field {
+  display: grid;
+  gap: 7px;
+  color: #24443e;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.signup-field input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #ccd7d4;
+  border-radius: 9px;
+  outline: none;
+  color: #24443e;
+  background: #fff;
+  font: inherit;
+  font-weight: 400;
+  transition: border-color 0.16s, box-shadow 0.16s;
+}
+
+.signup-field input:focus {
+  border-color: #1c5149;
+  box-shadow: 0 0 0 3px rgba(28, 81, 73, 0.1);
+}
+
+.signup-field input[aria-invalid="true"] {
+  border-color: #c43f3f;
+  background: #fffafa;
+}
+
+.signup-field input[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 3px rgba(196, 63, 63, 0.1);
+}
+
+.signup-field-hint,
+.signup-field-error {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.signup-field-hint {
+  color: #82908c;
+}
+
+.signup-field-error,
+.signup-form-message.error {
+  color: #b42323;
+}
+
+.signup-form-message {
+  margin: 0;
+  padding: 11px 13px;
+  border-radius: 9px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.signup-form-message.error {
+  background: #ffeded;
+}
+
+.signup-form-message.success {
+  color: #17664f;
+  background: #e2f6ee;
+}
+
+.signup-submit {
+  padding: 12px 16px;
+  border: 1px solid #153a34;
+  border-radius: 9px;
+  color: #fff;
+  background: #153a34;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.signup-submit:hover:not(:disabled) {
+  background: #1c5149;
+}
+
+.signup-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.signup-login-link {
+  color: #1c5149;
+  font-size: 13px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.signup-login-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .owner-signup-card {
+    padding: 24px 20px;
+  }
+
+  .owner-signup-heading h1 {
+    font-size: 26px;
+  }
+}

@@ -14,7 +14,7 @@ permissions:
 
 env:
   DB_SERVER: localhost
-  DB_NAME: MuseumGuideDB
+  DB_NAME: MuseumGuideDB_V2
   DB_DRIVER: ODBC Driver 18 for SQL Server
   JWT_SECRET_KEY: github-actions-test-secret-key
   JWT_EXPIRE_MINUTES: 60

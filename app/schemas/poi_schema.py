@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 
 
 class PoiCreate(BaseModel):
-    """Thông tin nội dung và vị trí của một POI."""
+    """Thông tin nội dung và vị trí của một địa điểm."""
 
     name: str = Field(min_length=1)
     description: str = Field(min_length=1)

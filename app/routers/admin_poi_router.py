@@ -1,6 +1,6 @@
 """API quản lý POI dùng chung cho SYSTEM_ADMIN và SHOP_OWNER."""
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.dependencies.auth_dependency import require_back_office
 from app.schemas.poi_schema import (
@@ -9,6 +9,8 @@ from app.schemas.poi_schema import (
     PoiCreate,
     PoiVisibility,
 )
+from app.schemas.content_request_schema import ContentRequestCreate
+from app.services.content_request_service import content_request_service
 from app.services.poi_service import poi_service
 
 
@@ -31,29 +33,21 @@ def get_all_pois_for_back_office(
 
 @router.post(
     "",
-    response_model=BackOfficePoiResponse,
-    status_code=status.HTTP_201_CREATED,
 )
 def create_poi(
     data: BackOfficePoiCreate,
     current_person: dict = Depends(require_back_office),
 ):
     """Tạo POI và xác định chủ sở hữu theo vai trò đang đăng nhập."""
-    poi_data = PoiCreate(
-        **data.model_dump(exclude={"id", "owner_id"})
-    )
-
-    return poi_service.create_poi_for_back_office(
-        data=poi_data,
-        current_person=current_person,
-        requested_poi_id=data.id,
-        requested_owner_id=data.owner_id,
-    )
+    if current_person.get("role") != "SHOP_OWNER":
+        raise HTTPException(status_code=403, detail="Admin cần xử lý yêu cầu tại mục Quản lý địa điểm")
+    return content_request_service.submit(ContentRequestCreate(
+        request_type="POI", action="CREATE", details=data.model_dump(exclude={"owner_id"})
+    ), current_person)
 
 
 @router.put(
     "/{poi_id}",
-    response_model=BackOfficePoiResponse,
 )
 def update_poi(
     poi_id: str,
@@ -61,11 +55,12 @@ def update_poi(
     current_person: dict = Depends(require_back_office),
 ):
     """Cập nhật POI theo phạm vi quyền của tài khoản hiện tại."""
-    return poi_service.update_poi_for_back_office(
-        poi_id=poi_id,
-        data=data,
-        current_person=current_person,
-    )
+    if current_person.get("role") != "SHOP_OWNER":
+        raise HTTPException(status_code=403, detail="Admin cần xử lý yêu cầu tại mục Quản lý địa điểm")
+    return content_request_service.submit(ContentRequestCreate(
+        request_type="POI", action="UPDATE", target_poi_id=poi_id,
+        details=data.model_dump(),
+    ), current_person)
 
 
 @router.patch(

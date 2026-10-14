@@ -71,6 +71,20 @@
   transition: 0.2s;
 }
 
+.nav-item-label {
+  min-width: 0;
+}
+
+.registration-pending-dot {
+  flex: 0 0 9px;
+  width: 9px;
+  height: 9px;
+  margin-left: auto;
+  border-radius: 50%;
+  background: #ed4b4b;
+  box-shadow: 0 0 0 2px rgba(237, 75, 75, 0.16);
+}
+
 .nav-item:hover,
 .nav-item.active {
   color: #ffffff;

@@ -1,3 +1,8 @@
+.poi-page {
+  width: 100%;
+  min-width: 0;
+}
+
 .poi-heading {
   display: flex;
   align-items: flex-end;
@@ -19,7 +24,7 @@
   font-size: 34px;
 }
 
-.poi-heading div > span {
+.poi-heading div>span {
   color: #778581;
 }
 
@@ -153,6 +158,7 @@
 
 .poi-table {
   width: 100%;
+  min-width: 760px;
   border-collapse: collapse;
 }
 
@@ -285,14 +291,24 @@
   }
 
   .owner-id-filter {
-    align-items: stretch;
-    flex-direction: column;
+    width: 100%;
+    flex-wrap: wrap;
   }
 
   .owner-id-filter input {
+    box-sizing: border-box;
+    width: min(100%, 280px);
+  }
+
+  .poi-toolbar > div:first-child {
     width: 100%;
   }
+
+  .poi-heading h1 {
+    font-size: 28px;
+  }
 }
+
 .poi-heading-actions {
   display: flex;
   align-items: center;
@@ -336,7 +352,8 @@
 @media (max-width: 700px) {
   .poi-heading-actions {
     width: 100%;
-    align-items: stretch;
-    flex-direction: column;
+    justify-content: space-between;
   }
+
+  .add-poi-button { white-space: nowrap; }
 }

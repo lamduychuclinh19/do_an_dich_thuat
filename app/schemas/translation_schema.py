@@ -11,7 +11,7 @@ LanguageCode = Literal["vi", "en", "fr", "zh", "ko"]
 class TranslationSourceCreate(BaseModel):
     """Nội dung nguồn tiếng Việt do SHOP_OWNER nhập một lần."""
 
-    poi_id: int = Field(gt=0)
+    poi_id: str = Field(min_length=1, max_length=10)
     title: str = Field(min_length=1, max_length=200)
     narration_text: str = Field(min_length=1, max_length=20_000)
 
@@ -34,7 +34,7 @@ class TranslationSourceUpdate(BaseModel):
 class TranslationCreate(BaseModel):
     """Schema nội bộ/ tương thích cho một bản ghi ngôn ngữ."""
 
-    poi_id: int = Field(gt=0)
+    poi_id: str = Field(min_length=1, max_length=10)
     language_code: LanguageCode
     title: str = Field(min_length=1, max_length=200)
     narration_text: str = Field(min_length=1, max_length=20_000)
@@ -59,7 +59,7 @@ class TranslationUpdate(BaseModel):
 
 class TranslationResponse(BaseModel):
     id: int
-    poi_id: int
+    poi_id: str
     language_code: LanguageCode
     title: str
     narration_text: str

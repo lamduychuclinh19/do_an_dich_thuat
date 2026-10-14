@@ -4,14 +4,80 @@ import "./PoiPage.css";
 import PoiFormModal from "../components/PoiFormModal";
 import { getSession } from "../services/auth";
 
+function normalizeOwnerSearchValue(value) {
+    return String(value ?? "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .toLocaleLowerCase("vi");
+}
+
+function getOwnerOptionLabel(owner) {
+    const displayName =
+        owner.full_name || owner.username || "Chưa có tên";
+    const username =
+        owner.full_name && owner.username
+            ? ` (${owner.username})`
+            : "";
+    const phone = owner.phone ? ` — ${owner.phone}` : "";
+    const email = owner.email ? ` — ${owner.email}` : "";
+
+    return `#${owner.id} — ${displayName}${username}${phone}${email}`;
+}
+
+function getOwnerSearchScore(owner, normalizedSearch) {
+    if (!normalizedSearch) {
+        return 0;
+    }
+
+    const fields = [
+        owner.id,
+        owner.full_name,
+        owner.username,
+        owner.phone,
+        owner.email,
+    ].map(normalizeOwnerSearchValue);
+    const normalizedLabel = normalizeOwnerSearchValue(
+        getOwnerOptionLabel(owner)
+    );
+
+    const exactIndex = fields.findIndex(
+        (field) => field === normalizedSearch
+    );
+    if (exactIndex >= 0) {
+        return exactIndex;
+    }
+
+    const startsWithIndex = fields.findIndex((field) =>
+        field.startsWith(normalizedSearch)
+    );
+    if (startsWithIndex >= 0) {
+        return 10 + startsWithIndex;
+    }
+
+    const includesIndex = fields.findIndex((field) =>
+        field.includes(normalizedSearch)
+    );
+    if (includesIndex >= 0) {
+        return 20 + includesIndex;
+    }
+
+    if (normalizedLabel.includes(normalizedSearch)) {
+        return 30;
+    }
+
+    return Number.POSITIVE_INFINITY;
+}
+
 function PoiPage() {
     const session = getSession();
     const isSystemAdmin = session?.role === "SYSTEM_ADMIN";
     const [pois, setPois] = useState([]);
     const [shopOwners, setShopOwners] = useState([]);
     const [searchText, setSearchText] = useState("");
-    const [ownerIdInput, setOwnerIdInput] = useState("");
-    const [ownerIdFilter, setOwnerIdFilter] = useState(null);
+    const [statusFilter, setStatusFilter] = useState("all");
+    const [ownerSearch, setOwnerSearch] = useState("");
+    const [selectedOwnerId, setSelectedOwnerId] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [changingPoiId, setChangingPoiId] = useState(null);
     const [errorMessage, setErrorMessage] = useState("");
@@ -90,6 +156,28 @@ function PoiPage() {
     const normalizedSearch = searchText
         .trim()
         .toLowerCase();
+    const normalizedOwnerSearch = normalizeOwnerSearchValue(
+        ownerSearch
+    );
+    const ownerSuggestions = shopOwners
+        .map((owner) => ({
+            owner,
+            score: getOwnerSearchScore(
+                owner,
+                normalizedOwnerSearch
+            ),
+        }))
+        .filter(({ score }) => Number.isFinite(score))
+        .sort(
+            (first, second) =>
+                first.score - second.score ||
+                getOwnerOptionLabel(first.owner).localeCompare(
+                    getOwnerOptionLabel(second.owner),
+                    "vi"
+                )
+        )
+        .slice(0, 10)
+        .map(({ owner }) => owner);
 
     const filteredPois = pois.filter((poi) => {
         const name = poi.name?.toLowerCase() || "";
@@ -97,46 +185,41 @@ function PoiPage() {
         const matchesSearch =
             name.includes(normalizedSearch) ||
             address.includes(normalizedSearch);
+        const matchesStatus =
+            statusFilter === "all" ||
+            (statusFilter === "active" && poi.is_active) ||
+            (statusFilter === "hidden" && !poi.is_active);
         const matchesOwner =
             !isSystemAdmin ||
-            ownerIdFilter === null ||
-            Number(poi.owner_id) === ownerIdFilter;
+            selectedOwnerId === null ||
+            String(poi.owner_id) === String(selectedOwnerId);
 
-        return matchesSearch && matchesOwner;
+        return matchesSearch && matchesStatus && matchesOwner;
     });
 
-    const handleOwnerFilter = (event) => {
-        event.preventDefault();
-        const normalizedOwnerId = ownerIdInput.trim();
+    const handleOwnerSearchChange = (event) => {
+        const searchValue = event.target.value;
+        const selectedOwner = shopOwners.find(
+            (owner) =>
+                normalizeOwnerSearchValue(
+                    getOwnerOptionLabel(owner)
+                ) === normalizeOwnerSearchValue(searchValue)
+        );
 
-        if (!normalizedOwnerId) {
-            setOwnerIdFilter(null);
-            return;
-        }
-
-        const ownerId = Number(normalizedOwnerId);
-        if (!Number.isInteger(ownerId) || ownerId <= 0) {
-            setErrorMessage(
-                "Mã chủ quán phải là một số nguyên dương."
-            );
-            return;
-        }
-
-        setErrorMessage("");
-        setOwnerIdFilter(ownerId);
+        setOwnerSearch(searchValue);
+        setSelectedOwnerId(selectedOwner?.id ?? null);
     };
 
     const clearOwnerFilter = () => {
-        setOwnerIdInput("");
-        setOwnerIdFilter(null);
-        setErrorMessage("");
+        setOwnerSearch("");
+        setSelectedOwnerId(null);
     };
     const activeShopOwners = shopOwners.filter(
         (owner) => owner.is_active
     );
     const getOwnerName = (ownerId) => {
         const owner = shopOwners.find(
-            (item) => item.id === ownerId
+            (item) => String(item.id) === String(ownerId)
         );
 
         return owner
@@ -190,48 +273,111 @@ function PoiPage() {
                         <span>địa điểm</span>
                     </div>
 
-                    <button
-                        type="button"
-                        className="add-poi-button"
-                        onClick={handleOpenCreate}
-                    >
-                        Thêm
-                    </button>
+                    {!isSystemAdmin && (
+                        <button
+                            type="button"
+                            className="add-poi-button"
+                            onClick={handleOpenCreate}
+                        >
+                            Thêm địa điểm
+                        </button>
+                    )}
                 </div>
             </div>
 
             <section className="poi-container">
-                <div className="poi-toolbar">
-                    {isSystemAdmin && (
-                        <form
+                <div
+                    className="poi-toolbar"
+                    style={{ flexWrap: "wrap" }}
+                >
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            flexWrap: "wrap",
+                            gap: "12px",
+                        }}
+                    >
+                        <div
                             className="owner-id-filter"
-                            onSubmit={handleOwnerFilter}
+                            role="group"
+                            aria-label="Lọc theo tình trạng địa điểm"
                         >
-                            <input
-                                type="text"
-                                min="1"
-                                step="1"
-                                value={ownerIdInput}
-                                onChange={(event) =>
-                                    setOwnerIdInput(event.target.value)
+                            <button
+                                type="button"
+                                className={
+                                    statusFilter === "all"
+                                        ? ""
+                                        : "clear-owner-filter"
                                 }
-                                placeholder="Nhập mã chủ quán"
-                                aria-label="Mã ID chủ quán"
-                            />
+                                aria-pressed={statusFilter === "all"}
+                                onClick={() => setStatusFilter("all")}
+                            >
+                                Tất cả
+                            </button>
 
-                            <button type="submit">Lọc</button>
+                            <button
+                                type="button"
+                                className={
+                                    statusFilter === "active"
+                                        ? ""
+                                        : "clear-owner-filter"
+                                }
+                                aria-pressed={statusFilter === "active"}
+                                onClick={() => setStatusFilter("active")}
+                            >
+                                Đang hiển thị
+                            </button>
 
-                            {ownerIdFilter !== null && (
-                                <button
-                                    type="button"
-                                    className="clear-owner-filter"
-                                    onClick={clearOwnerFilter}
-                                >
-                                    Bỏ lọc
-                                </button>
-                            )}
-                        </form>
-                    )}
+                            <button
+                                type="button"
+                                className={
+                                    statusFilter === "hidden"
+                                        ? ""
+                                        : "clear-owner-filter"
+                                }
+                                aria-pressed={statusFilter === "hidden"}
+                                onClick={() => setStatusFilter("hidden")}
+                            >
+                                Đang ẩn
+                            </button>
+                        </div>
+
+                        {isSystemAdmin && (
+                            <div className="owner-id-filter">
+                                <input
+                                    type="search"
+                                    list="poi-owner-filter-options"
+                                    value={ownerSearch}
+                                    onChange={handleOwnerSearchChange}
+                                    placeholder="Tìm số điện thoại hoặc email"
+                                    aria-label="Lọc địa điểm theo chủ sở hữu"
+                                    autoComplete="off"
+                                />
+
+                                <datalist id="poi-owner-filter-options">
+                                    {ownerSuggestions.map((owner) => (
+                                        <option
+                                            key={owner.id}
+                                            value={getOwnerOptionLabel(owner)}
+                                        />
+                                    ))}
+                                </datalist>
+
+                                {(ownerSearch ||
+                                    selectedOwnerId !== null) && (
+                                    <button
+                                        type="button"
+                                        className="clear-owner-filter"
+                                        onClick={clearOwnerFilter}
+                                    >
+                                        Bỏ lọc
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
                     <div className="search-box">
                         <span>⌕</span>
 
@@ -256,12 +402,13 @@ function PoiPage() {
                     <table className="poi-table">
                         <thead>
                             <tr>
-                                <th>ID</th>
-                                <th>Địa điểm</th>
+                                <th>Mã</th>
+                                <th>Tên địa điểm</th>
                                 <th>Địa chỉ</th>
                                 {isSystemAdmin && <th>Mã chủ quán</th>}
                                 <th>Bán kính</th>
                                 <th>Trạng thái</th>
+                                <th>Thao tác</th>
                             </tr>
                         </thead>
 
@@ -336,13 +483,15 @@ function PoiPage() {
 
                                         <td>
                                             <div className="poi-action-group">
-                                                <button
-                                                    type="button"
-                                                    className="edit-poi-button"
-                                                    onClick={() => handleOpenEdit(poi)}
-                                                >
-                                                    Sửa
-                                                </button>
+                                                {!isSystemAdmin && (
+                                                    <button
+                                                        type="button"
+                                                        className="edit-poi-button"
+                                                        onClick={() => handleOpenEdit(poi)}
+                                                    >
+                                                        Cập nhật
+                                                    </button>
+                                                )}
 
                                                 <button
                                                     type="button"

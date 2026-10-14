@@ -49,7 +49,7 @@ class ProfileService:
         data: ShopOwnerProfileUpdate,
         current_person: dict,
     ) -> dict:
-        """Sửa hồ sơ và bảo vệ tính duy nhất của SĐT/email."""
+        """Sửa hồ sơ và bảo vệ tính duy nhất của Số điện thoại/email."""
         existing = self._get_current_shop_owner(current_person)
 
         full_name = data.full_name.strip()

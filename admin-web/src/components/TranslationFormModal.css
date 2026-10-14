@@ -145,6 +145,27 @@
   color: #a42c2c;
   background: #ffeded;
   font-size: 13px;
+  line-height: 1.5;
+}
+
+.translation-field-error {
+  margin: 7px 0 0;
+  color: #b42318;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.translation-form-modal input[aria-invalid="true"],
+.translation-form-modal textarea[aria-invalid="true"] {
+  border-color: #d92d20;
+  background: #fff8f7;
+}
+
+.translation-form-modal input[aria-invalid="true"]:focus,
+.translation-form-modal textarea[aria-invalid="true"]:focus {
+  border-color: #d92d20;
+  box-shadow: 0 0 0 4px rgba(217, 45, 32, 0.12);
 }
 
 .translation-modal-actions {

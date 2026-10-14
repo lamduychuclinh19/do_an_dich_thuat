@@ -110,6 +110,28 @@
   font-size: 13px;
 }
 
+.field-error {
+  margin: 7px 0 0;
+  color: #b42318;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.poi-form-modal input[aria-invalid="true"],
+.poi-form-modal textarea[aria-invalid="true"],
+.poi-form-modal select[aria-invalid="true"] {
+  border-color: #d92d20;
+  background: #fff8f7;
+}
+
+.poi-form-modal input[aria-invalid="true"]:focus,
+.poi-form-modal textarea[aria-invalid="true"]:focus,
+.poi-form-modal select[aria-invalid="true"]:focus {
+  border-color: #d92d20;
+  box-shadow: 0 0 0 4px rgba(217, 45, 32, 0.12);
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;
@@ -168,3 +190,9 @@
   line-height: 1.5;
 }
 
+.poi-id-note {
+  margin: 8px 0 0;
+  color: #73837f;
+  font-size: 12px;
+  line-height: 1.5;
+}
