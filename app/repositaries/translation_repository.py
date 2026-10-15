@@ -80,6 +80,65 @@ class TranslationRepository:
 
         return [self._row_to_dict(row) for row in rows]
 
+    def get_public_guides(self, requested_language_code: str) -> list[dict]:
+        """Return active POIs with a requested translation, then en/vi fallback."""
+        query = text("""
+            SELECT
+                poi.id AS poi_id,
+                poi.name AS poi_name,
+                poi.address,
+                poi.latitude,
+                poi.longitude,
+                poi.trigger_radius_meters,
+                :requested_language_code AS requested_language_code,
+                COALESCE(requested.language_code, english.language_code,
+                         vietnamese.language_code) AS language_code,
+                COALESCE(requested.title, english.title, vietnamese.title) AS title,
+                COALESCE(requested.narration_text, english.narration_text,
+                         vietnamese.narration_text) AS narration_text,
+                COALESCE(requested.audio_url, english.audio_url,
+                         vietnamese.audio_url) AS audio_url,
+                CAST(CASE WHEN requested.id IS NULL THEN 1 ELSE 0 END AS BIT)
+                    AS is_fallback
+            FROM dbo.pois AS poi
+            OUTER APPLY (
+                SELECT TOP (1) translation.id, translation.language_code,
+                       translation.title, translation.narration_text,
+                       translation.audio_url
+                FROM dbo.translations AS translation
+                WHERE translation.poi_id=poi.id
+                  AND translation.language_code=:requested_language_code
+                  AND translation.is_active=1
+            ) AS requested
+            OUTER APPLY (
+                SELECT TOP (1) translation.id, translation.language_code,
+                       translation.title, translation.narration_text,
+                       translation.audio_url
+                FROM dbo.translations AS translation
+                WHERE translation.poi_id=poi.id
+                  AND translation.language_code=N'en'
+                  AND translation.is_active=1
+            ) AS english
+            OUTER APPLY (
+                SELECT TOP (1) translation.id, translation.language_code,
+                       translation.title, translation.narration_text,
+                       translation.audio_url
+                FROM dbo.translations AS translation
+                WHERE translation.poi_id=poi.id
+                  AND translation.language_code=N'vi'
+                  AND translation.is_active=1
+            ) AS vietnamese
+            WHERE poi.is_active=1
+              AND COALESCE(requested.id, english.id, vietnamese.id) IS NOT NULL
+            ORDER BY poi.id
+        """)
+        with engine.connect() as connection:
+            rows = connection.execute(
+                query,
+                {"requested_language_code": requested_language_code},
+            ).mappings().all()
+        return [dict(row) for row in rows]
+
     def get_by_id_for_owner(
         self,
         translation_id: int,

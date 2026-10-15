@@ -1,8 +1,13 @@
+import logging
 from pathlib import Path
 from uuid import uuid4
 
 import edge_tts
+from aiohttp import WSServerHandshakeError
 from fastapi import HTTPException, UploadFile, status
+
+
+logger = logging.getLogger(__name__)
 
 
 # Thư mục lưu các file MP3 đã được Edge-TTS tạo.
@@ -194,6 +199,11 @@ class AudioService:
             temporary_path.replace(final_path)
 
         except Exception as error:
+            logger.exception(
+                "Edge-TTS failed (voice=%s, characters=%s)",
+                voice,
+                len(cleaned_text),
+            )
             # Nếu mạng hoặc Edge-TTS lỗi, dọn file tạm.
             if temporary_path.exists():
                 temporary_path.unlink()
@@ -201,15 +211,23 @@ class AudioService:
             if final_path.exists():
                 final_path.unlink()
 
+            if isinstance(error, WSServerHandshakeError) and error.status == 403:
+                detail = (
+                    "Dịch vụ Edge-TTS từ chối kết nối (HTTP 403). "
+                    "Phiếu vẫn chưa được duyệt và dữ liệu chưa thay đổi. "
+                    "Hãy thử lại sau hoặc thử một tuyến mạng khác."
+                )
+            else:
+                detail = (
+                    "Không thể tạo audio lúc này. "
+                    "Vui lòng kiểm tra dịch vụ tạo giọng đọc và thử lại."
+                )
+
             raise HTTPException(
                 status_code=(
                     status.HTTP_503_SERVICE_UNAVAILABLE
                 ),
-                detail=(
-                    "Không thể tạo audio lúc này. "
-                    "Vui lòng kiểm tra kết nối mạng "
-                    "và thử lại."
-                ),
+                detail=detail,
             ) from error
 
         return f"/audio/{final_filename}"

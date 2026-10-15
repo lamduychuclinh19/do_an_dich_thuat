@@ -8,10 +8,10 @@
 
 .registration-heading {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 24px;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 }
 
 .registration-heading > div:first-child > p,
@@ -101,8 +101,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   padding: 20px;
   border-bottom: 1px solid #e7ecea;
+}
+
+.registration-result-count {
+  padding: 0 20px 12px;
+  color: #82908c;
+  font-size: 13px;
 }
 
 .registration-toolbar h2 {
@@ -418,6 +425,15 @@
   .registration-heading {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .registration-toolbar {
+    padding: 18px 15px;
+  }
+
+  .registration-result-count {
+    padding-right: 15px;
+    padding-left: 15px;
   }
 
   .registration-heading h1 {

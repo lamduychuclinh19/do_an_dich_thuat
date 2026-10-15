@@ -338,7 +338,7 @@ function PoiFormModal({
 
       if (!isSystemAdmin) {
         const action = editingPoi ? "cập nhật" : "tạo mới";
-        if (!window.confirm(`Cậu chắc chắn muốn gửi yêu cầu ${action} địa điểm để admin xét duyệt chứ?`)) {
+        if (!window.confirm(`Cậu chắc chắn muốn gửi yêu cầu ${action} địa điểm để quản trị viên xét duyệt chứ?`)) {
           return;
         }
         await api.post("/api/content-requests", {
@@ -347,7 +347,7 @@ function PoiFormModal({
           target_poi_id: editingPoi?.id || null,
           details: { ...payload, ...(editingPoi ? {} : { id: formData.id.trim().toUpperCase() }) },
         });
-        window.alert("Đã gửi yêu cầu. Địa điểm chỉ được lưu sau khi admin đồng ý.");
+        window.alert("Đã gửi yêu cầu. Địa điểm chỉ được lưu sau khi quản trị viên đồng ý.");
         window.dispatchEvent(new Event("owner-content-requests-updated"));
         onClose();
         return;

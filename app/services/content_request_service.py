@@ -14,6 +14,7 @@ class ContentRequestService:
         if owner.get("role") != "SHOP_OWNER":
             raise HTTPException(status_code=403, detail="Chỉ chủ quán mới được gửi yêu cầu thay đổi nội dung")
         details = dict(data.details)
+        previous_details = None
         target_id = str(data.target_poi_id or details.get("poi_id") or "").strip()
 
         if data.request_type == "POI":
@@ -30,6 +31,13 @@ class ContentRequestService:
                 current = poi_repository.get_by_id_for_owner(target_id, owner["id"])
                 if not current:
                     raise HTTPException(status_code=404, detail="Không tìm thấy địa điểm của chủ quán")
+                previous_details = {
+                    key: current[key]
+                    for key in (
+                        "name", "description", "address", "latitude", "longitude",
+                        "trigger_radius_meters",
+                    )
+                }
                 payload = PoiCreate(**details).model_dump()
                 details["requested_poi_id"] = target_id
             if data.action == "CREATE" and poi_repository.get_by_id(details["requested_poi_id"]):
@@ -45,10 +53,21 @@ class ContentRequestService:
             existing = translation_service.get_all_translations_for_back_office(
                 target_id, {"id": owner["id"], "role": "SHOP_OWNER"}
             )
+            current_source = next(
+                (item for item in existing if item.get("language_code") == "vi"),
+                None,
+            )
             if data.action == "CREATE" and existing:
                 raise HTTPException(status_code=409, detail="Địa điểm đã có bản dịch; hãy gửi yêu cầu cập nhật")
             if data.action == "UPDATE" and not existing:
                 raise HTTPException(status_code=409, detail="Địa điểm chưa có bản dịch; hãy gửi yêu cầu tạo")
+            if data.action == "UPDATE" and not current_source:
+                raise HTTPException(status_code=409, detail="Không tìm thấy nội dung nguồn tiếng Việt hiện tại")
+            if data.action == "UPDATE" and current_source:
+                previous_details = {
+                    "title": current_source["title"],
+                    "narration_text": current_source["narration_text"],
+                }
             details = {
                 "poi_id": target_id,
                 "title": str(details.get("title", "")).strip(),
@@ -63,6 +82,7 @@ class ContentRequestService:
             action=data.action,
             submitter_id=owner["id"],
             details=details,
+            previous_details=previous_details,
         )
 
     def list_admin(self, request_type: str, admin: dict) -> list[dict]:
@@ -76,6 +96,7 @@ class ContentRequestService:
         item = content_request_repository.get(request_id)
         if not item:
             raise HTTPException(status_code=404, detail="Không tìm thấy yêu cầu")
+        self._restore_legacy_pending_snapshot(item)
         return item
 
     async def decide(self, request_id: int, approved: bool, note: str, admin: dict) -> dict:
@@ -125,7 +146,49 @@ class ContentRequestService:
     def owner_requests(self, owner: dict) -> list[dict]:
         if owner.get("role") != "SHOP_OWNER":
             raise HTTPException(status_code=403, detail="Chức năng chỉ dành cho chủ quán")
-        return content_request_repository.list_for_owner(owner["id"])
+        items = content_request_repository.list_for_owner(owner["id"])
+        for item in items:
+            self._restore_legacy_pending_snapshot(item)
+        return items
+
+    @staticmethod
+    def _restore_legacy_pending_snapshot(request: dict) -> None:
+        """Use the still-current DB row as the old version for legacy pending updates."""
+        if (
+            request.get("action") != "UPDATE"
+            or request.get("status") not in {"PENDING", "PROCESSING"}
+            or request.get("previous_details")
+        ):
+            return
+
+        owner_id = request["submitted_by_person_id"]
+        details = request.get("details") or {}
+        if request.get("request_type") == "POI":
+            current = poi_repository.get_by_id_for_owner(
+                details.get("requested_poi_id"), owner_id
+            )
+            if current:
+                request["previous_details"] = {
+                    key: current.get(key)
+                    for key in (
+                        "name", "description", "address", "latitude", "longitude",
+                        "trigger_radius_meters",
+                    )
+                }
+            return
+
+        translations = translation_service.get_all_translations_for_back_office(
+            details.get("poi_id"), {"id": owner_id, "role": "SHOP_OWNER"}
+        )
+        source = next(
+            (item for item in translations if item.get("language_code") == "vi"),
+            None,
+        )
+        if source:
+            request["previous_details"] = {
+                "title": source.get("title"),
+                "narration_text": source.get("narration_text"),
+            }
 
     def owner_notifications(self, owner: dict) -> list[dict]:
         if owner.get("role") != "SHOP_OWNER":

@@ -128,15 +128,6 @@ export default function OwnerRegistrationPage() {
           <h1>Phiếu đăng ký chủ quán</h1>
           <span>Xem xét thông tin và phản hồi yêu cầu tạo tài khoản.</span>
         </div>
-        <div className="registration-heading-actions">
-          <div className="registration-summary">
-            <strong>{pendingCount}</strong>
-            <span>phiếu chờ</span>
-          </div>
-          <button className="registration-refresh" type="button" onClick={load} disabled={isLoading}>
-            {isLoading ? "Đang tải..." : "Làm mới"}
-          </button>
-        </div>
       </header>
 
       {error && <p className="registration-message error">{error}</p>}
@@ -145,8 +136,11 @@ export default function OwnerRegistrationPage() {
         <div className="registration-toolbar">
           <div>
             <h2>Danh sách phiếu</h2>
-            <span>Hiển thị {filteredItems.length} trên tổng số {items.length} phiếu</span>
+            <span>{pendingCount} phiếu đang chờ quản trị viên xử lý</span>
           </div>
+          <button className="registration-refresh" type="button" onClick={load} disabled={isLoading}>
+            {isLoading ? "Đang tải..." : "Làm mới"}
+          </button>
         </div>
         <div className="registration-filters">
           <div className="registration-filter-buttons" role="group" aria-label="Lọc phiếu đăng ký theo trạng thái">
@@ -178,6 +172,7 @@ export default function OwnerRegistrationPage() {
             />
           </label>
         </div>
+        <div className="registration-result-count">Hiển thị {filteredItems.length} trên tổng số {items.length} phiếu</div>
         <div className="registration-table-wrap">
           <table className="registration-table">
             <thead>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import api from "../services/api";
+import ContentRequestComparison from "./ContentRequestComparison";
 import "./ContentRequestInbox.css";
 
 const dateText = (value) => value ? new Date(value).toLocaleString("vi-VN") : "—";
@@ -99,11 +100,6 @@ export default function ContentRequestInbox({ type }) {
     return matchesStatus && matchesSearch;
   });
 
-  const detail = selected?.details || {};
-  const rows = type === "POI"
-    ? [["Mã địa điểm", detail.requested_poi_id], ["Tên", detail.name], ["Mô tả", detail.description], ["Địa chỉ", detail.address], ["Vĩ độ", detail.latitude], ["Kinh độ", detail.longitude], ["Bán kính", `${detail.trigger_radius_meters} m`]]
-    : [["Mã địa điểm", detail.poi_id], ["Tiêu đề", detail.title], ["Nội dung tiếng Việt", detail.narration_text]];
-
   return <section className="content-request-panel">
     <header className="content-request-header">
       <div><h2>{type === "POI" ? "Yêu cầu địa điểm từ chủ quán" : "Yêu cầu bản dịch từ chủ quán"}</h2><p>{pending} yêu cầu đang chờ quản trị viên xử lý</p></div>
@@ -148,7 +144,13 @@ export default function ContentRequestInbox({ type }) {
     {selected && <div className="content-request-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setSelected(null)}>
       <section className="content-request-modal" role="dialog" aria-modal="true" aria-labelledby="content-request-title">
         <header><div><p>YÊU CẦU {type === "POI" ? "ĐỊA ĐIỂM" : "BẢN DỊCH"} #{selected.id}</p><h2 id="content-request-title">{selected.action === "CREATE" ? "Tạo mới" : "Cập nhật"} · {selected.submitter_name || selected.submitted_by_username}</h2></div><button type="button" aria-label="Đóng" onClick={() => setSelected(null)}>×</button></header>
-        <dl><div><dt>Tên đăng nhập</dt><dd>{selected.submitted_by_username}</dd></div><div><dt>Số điện thoại</dt><dd>{selected.submitter_phone || "—"}</dd></div><div><dt>Email</dt><dd>{selected.submitter_email || "—"}</dd></div>{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || "—"}</dd></div>)}<div><dt>Ngày gửi</dt><dd>{dateText(selected.created_at)}</dd></div></dl>
+        <dl><div><dt>Tên đăng nhập</dt><dd>{selected.submitted_by_username}</dd></div><div><dt>Số điện thoại</dt><dd>{selected.submitter_phone || "—"}</dd></div><div><dt>Email</dt><dd>{selected.submitter_email || "—"}</dd></div><div><dt>Ngày gửi</dt><dd>{dateText(selected.created_at)}</dd></div></dl>
+        <ContentRequestComparison
+          type={type}
+          action={selected.action}
+          details={selected.details}
+          previousDetails={selected.previous_details}
+        />
         {selected.status === "PENDING" ? <>
           <label htmlFor="content-request-note">Ghi chú gửi chủ quán</label>
           <textarea id="content-request-note" rows="4" maxLength={2000} value={note} onChange={(event) => { setNote(event.target.value); setError(""); }} />

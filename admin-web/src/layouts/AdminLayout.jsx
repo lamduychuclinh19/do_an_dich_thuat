@@ -16,10 +16,20 @@ function AdminLayout() {
     const navigate = useNavigate();
     const session = getSession();
     const roleLabel = getRoleLabel(session?.role);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() =>
+        window.matchMedia("(max-width: 760px)").matches
+    );
     const [pendingRegistrationCount, setPendingRegistrationCount] = useState(0);
     const [unreadOwnerNotifications, setUnreadOwnerNotifications] = useState(0);
     const [pendingPoiRequests, setPendingPoiRequests] = useState(0);
     const [pendingTranslationRequests, setPendingTranslationRequests] = useState(0);
+
+    useEffect(() => {
+        const mediaQuery = window.matchMedia("(max-width: 760px)");
+        const updateForViewport = (event) => setIsSidebarCollapsed(event.matches);
+        mediaQuery.addEventListener("change", updateForViewport);
+        return () => mediaQuery.removeEventListener("change", updateForViewport);
+    }, []);
 
     useEffect(() => {
         if (session?.role !== "SYSTEM_ADMIN") {
@@ -117,100 +127,117 @@ function AdminLayout() {
     };
 
     return (
-        <div className="admin-layout">
-            <aside className="admin-sidebar">
+        <div className={`admin-layout${isSidebarCollapsed ? " sidebar-collapsed" : ""}`}>
+            <aside className="admin-sidebar" id="admin-sidebar">
                 <div className="sidebar-brand">
-                    <div>
+                    {!isSidebarCollapsed && <div>
                         <strong>Thuyết minh địa điểm</strong>
                         <small>{roleLabel}</small>
-                    </div>
+                    </div>}
+                    <button
+                        className="sidebar-toggle"
+                        type="button"
+                        onClick={() => setIsSidebarCollapsed((collapsed) => !collapsed)}
+                        aria-label={isSidebarCollapsed ? "Mở thanh bên" : "Thu gọn thanh bên"}
+                        aria-expanded={!isSidebarCollapsed}
+                        aria-controls="admin-sidebar"
+                        title={isSidebarCollapsed ? "Mở thanh bên" : "Thu gọn thanh bên"}
+                    >
+                        <svg viewBox="0 0 20 20" aria-hidden="true">
+                            <rect x="2.5" y="3" width="15" height="14" rx="2.5" />
+                            <path d={isSidebarCollapsed ? "M7 3.5v13" : "M13 3.5v13"} />
+                        </svg>
+                    </button>
                 </div>
 
                 <nav className="sidebar-navigation">
 
                     <NavLink
                         to="/dashboard"
+                        title="Tổng quan"
                         className={({ isActive }) =>
                             isActive ? "nav-item active" : "nav-item"
                         }
                     >
-                        <span>◫</span>
-                        Tổng quan
-                    </NavLink>
-
-                    <NavLink to="/pois" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
-                        <span>⌖</span>
-                        <span className="nav-item-label">Quản lý Địa điểm</span>
-                    </NavLink>
-
-                    <NavLink
-                        to="/translations"
-                        className={({ isActive }) =>
-                            isActive ? "nav-item active" : "nav-item"
-                        }
-                    >
-                        <span>文</span>
-                        <span className="nav-item-label">Quản lý Bản dịch</span>
+                        <span className="nav-item-icon" aria-hidden="true">◫</span>
+                        <span className="nav-item-label">Tổng quan</span>
                     </NavLink>
 
                     {session?.role === "SYSTEM_ADMIN" && (
                         <>
-                            <NavLink to="/poi-approvals" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
-                                <span>✓</span>
+                            <NavLink to="/shop-owners" title="Quản lý chủ quán" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+                                <span className="nav-item-icon" aria-hidden="true">♙</span>
+                                <span className="nav-item-label">Quản lý chủ quán</span>
+                            </NavLink>
+                            <NavLink to="/poi-approvals" title="Duyệt địa điểm" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+                                <span className="nav-item-icon" aria-hidden="true">✓</span>
                                 <span className="nav-item-label">Duyệt địa điểm</span>
                                 {pendingPoiRequests > 0 && <span className="registration-pending-dot" title={`${pendingPoiRequests} yêu cầu chờ duyệt`} aria-label={`${pendingPoiRequests} yêu cầu chờ duyệt`} />}
                             </NavLink>
-                            <NavLink to="/translation-approvals" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
-                                <span>✓</span>
+                            <NavLink to="/translation-approvals" title="Duyệt bản dịch" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+                                <span className="nav-item-icon" aria-hidden="true">✓</span>
                                 <span className="nav-item-label">Duyệt bản dịch</span>
                                 {pendingTranslationRequests > 0 && <span className="registration-pending-dot" title={`${pendingTranslationRequests} yêu cầu chờ duyệt`} aria-label={`${pendingTranslationRequests} yêu cầu chờ duyệt`} />}
                             </NavLink>
                         </>
                     )}
 
-                    {session?.role === "SYSTEM_ADMIN" && (
-                        <NavLink to="/owner-registrations" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
-                            <span>▤</span>
-                            <span className="nav-item-label">Phiếu đăng ký</span>
-                            {pendingRegistrationCount > 0 && (
-                                <span
-                                    className="registration-pending-dot"
-                                    title={`${pendingRegistrationCount} phiếu chưa duyệt`}
-                                    aria-label={`${pendingRegistrationCount} phiếu chưa duyệt`}
-                                />
-                            )}
-                        </NavLink>
-                    )}
-
-                    {session?.role === "SYSTEM_ADMIN" && (
-                        <NavLink
-                            to="/shop-owners"
-                            className={({ isActive }) =>
-                                isActive ? "nav-item active" : "nav-item"
-                            }
-                        >
-                            <span>♙</span>
-                            Quản lý chủ quán
-                        </NavLink>
-                    )}
-
                     {session?.role === "SHOP_OWNER" && (
-                        <NavLink to="/notifications" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
-                            <span>♧</span>
+                        <NavLink to="/notifications" title="Thông báo" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+                            <span className="nav-item-icon" aria-hidden="true">♧</span>
                             <span className="nav-item-label">Thông báo</span>
                             {unreadOwnerNotifications > 0 && <span className="registration-pending-dot" title={`${unreadOwnerNotifications} thông báo chưa đọc`} aria-label={`${unreadOwnerNotifications} thông báo chưa đọc`} />}
                         </NavLink>
                     )}
 
                     {session?.role === "SHOP_OWNER" && (
+                        <NavLink to="/my-requests" title="Gửi yêu cầu" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+                            <span className="nav-item-icon" aria-hidden="true">▤</span>
+                            <span className="nav-item-label">Gửi yêu cầu</span>
+                        </NavLink>
+                    )}
+
+                    {session?.role === "SYSTEM_ADMIN" && (
+                        <>
+                            <NavLink to="/pois" title="Quản lý địa điểm" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+                                <span className="nav-item-icon" aria-hidden="true">⌖</span>
+                                <span className="nav-item-label">Quản lý địa điểm</span>
+                            </NavLink>
+                            <NavLink to="/translations" title="Quản lý bản dịch" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+                                <span className="nav-item-icon" aria-hidden="true">文</span>
+                                <span className="nav-item-label">Quản lý bản dịch</span>
+                            </NavLink>
+                            <NavLink to="/owner-registrations" title="Phiếu đăng ký" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+                                <span className="nav-item-icon" aria-hidden="true">▤</span>
+                                <span className="nav-item-label">Phiếu đăng ký</span>
+                                {pendingRegistrationCount > 0 && <span className="registration-pending-dot" title={`${pendingRegistrationCount} phiếu chưa duyệt`} aria-label={`${pendingRegistrationCount} phiếu chưa duyệt`} />}
+                            </NavLink>
+                        </>
+                    )}
+
+                    {session?.role === "SHOP_OWNER" && (
+                        <>
+                            <NavLink to="/pois" title="Quản lý địa điểm" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+                                <span className="nav-item-icon" aria-hidden="true">⌖</span>
+                                <span className="nav-item-label">Quản lý địa điểm</span>
+                            </NavLink>
+                            <NavLink to="/translations" title="Quản lý bản dịch" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+                                <span className="nav-item-icon" aria-hidden="true">文</span>
+                                <span className="nav-item-label">Quản lý bản dịch</span>
+                            </NavLink>
+                        </>
+                    )}
+
+                    {session?.role === "SHOP_OWNER" && (
                         <NavLink
                             to="/profile"
+                            title="Thông tin cá nhân"
                             className={({ isActive }) =>
                                 isActive ? "nav-item active" : "nav-item"
                             }
                         >
-                            <span>◎</span>
-                            Thông tin cá nhân
+                            <span className="nav-item-icon" aria-hidden="true">◎</span>
+                            <span className="nav-item-label">Thông tin cá nhân</span>
                         </NavLink>
                     )}
                 </nav>
@@ -219,8 +246,10 @@ function AdminLayout() {
                     className="logout-button"
                     type="button"
                     onClick={handleLogout}
+                    title="Đăng xuất"
                 >
-                    Đăng xuất
+                    <span className="logout-icon" aria-hidden="true">↪</span>
+                    <span className="logout-label">Đăng xuất</span>
                 </button>
             </aside>
 

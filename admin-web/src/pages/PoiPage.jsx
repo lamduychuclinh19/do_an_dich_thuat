@@ -279,7 +279,7 @@ function PoiPage() {
                             className="add-poi-button"
                             onClick={handleOpenCreate}
                         >
-                            Thêm địa điểm
+                            Thêm
                         </button>
                     )}
                 </div>

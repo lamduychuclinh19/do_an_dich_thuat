@@ -269,7 +269,7 @@ function TranslationFormModal({
 
       if (isShopOwner) {
         const action = hasTranslations ? "cập nhật" : "tạo mới";
-        if (!window.confirm(`Cậu chắc chắn muốn gửi yêu cầu ${action} bản dịch để admin xét duyệt chứ?`)) {
+        if (!window.confirm(`Cậu chắc chắn muốn gửi yêu cầu ${action} bản dịch để quản trị viên xét duyệt chứ?`)) {
           return;
         }
         const narrationText = sourceMode === "file"
@@ -285,7 +285,7 @@ function TranslationFormModal({
             narration_text: narrationText.trim(),
           },
         });
-        window.alert("Đã gửi yêu cầu. Bản dịch chỉ được cập nhật sau khi admin đồng ý.");
+        window.alert("Đã gửi yêu cầu. Bản dịch chỉ được cập nhật sau khi quản trị viên đồng ý.");
         window.dispatchEvent(new Event("owner-content-requests-updated"));
         onClose();
         return;

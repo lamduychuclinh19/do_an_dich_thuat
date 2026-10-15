@@ -31,16 +31,18 @@ function decodeJwtPayload(token) {
 }
 
 export function saveSession(accessToken) {
-  localStorage.setItem(TOKEN_KEY, accessToken);
+  // Mỗi tab có phiên riêng để admin và chủ quán có thể đăng nhập đồng thời.
+  // localStorage được chia sẻ giữa các tab cùng origin và sẽ ghi đè token.
+  sessionStorage.setItem(TOKEN_KEY, accessToken);
   return getSession();
 }
 
 export function clearSession() {
-  localStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
 }
 
 export function getAccessToken() {
-  return localStorage.getItem(TOKEN_KEY);
+  return sessionStorage.getItem(TOKEN_KEY);
 }
 
 export function getSession() {

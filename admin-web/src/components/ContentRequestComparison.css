@@ -1,0 +1,82 @@
+.request-comparison {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0 0 20px;
+}
+
+.request-comparison-create {
+  display: block;
+}
+
+.request-comparison-column,
+.request-comparison-create {
+  min-width: 0;
+  padding: 16px;
+  border-radius: 12px;
+  background: #f7f9f8;
+}
+
+.request-comparison h3 {
+  margin: 0 0 14px;
+  color: #24443e;
+  font-size: 15px;
+}
+
+.request-comparison-new h3 {
+  color: #173c36;
+}
+
+.request-comparison-fields {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.request-comparison-field {
+  min-width: 0;
+  padding: 10px 11px;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.request-comparison-field dt {
+  margin-bottom: 5px;
+  color: #778581;
+  font-size: 12px;
+}
+
+.request-comparison-field dd {
+  margin: 0;
+  color: #24443e;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.request-comparison-field.changed {
+  background: #fff4f3;
+}
+
+.request-comparison-field.changed dd {
+  color: #b95757;
+}
+
+.request-comparison-field.changed small {
+  display: block;
+  margin-top: 5px;
+  color: #c66a6a;
+  font-size: 11px;
+}
+
+.request-comparison-unavailable {
+  margin: 0 0 12px;
+  color: #82908c;
+  font-size: 13px;
+}
+
+@media (max-width: 680px) {
+  .request-comparison {
+    grid-template-columns: 1fr;
+  }
+}
