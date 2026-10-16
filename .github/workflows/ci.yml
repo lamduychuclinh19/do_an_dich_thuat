@@ -1,9 +1,9 @@
-name: Backend CI
+name: CI/CD
 
 on:
   push:
     branches:
-      - main
+      - "**"
   pull_request:
     branches:
       - main
@@ -12,31 +12,79 @@ on:
 permissions:
   contents: read
 
-env:
-  DB_SERVER: localhost
-  DB_NAME: MuseumGuideDB_V2
-  DB_DRIVER: ODBC Driver 18 for SQL Server
-  JWT_SECRET_KEY: github-actions-test-secret-key
-  JWT_EXPIRE_MINUTES: 60
-
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test:
+  backend:
+    name: Backend checks
     runs-on: ubuntu-latest
+    env:
+      DB_SERVER: localhost
+      DB_NAME: MuseumGuideDB_V2
+      DB_DRIVER: ODBC Driver 18 for SQL Server
+      JWT_SECRET_KEY: github-actions-test-secret-key
+      JWT_EXPIRE_MINUTES: 60
 
     steps:
-      - name: Download source code
-        uses: actions/checkout@v6
+      - name: Check out source
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
 
-      - name: Install dependencies
+      - name: Install ODBC runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes unixodbc-dev
+
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          python -m pip install -r requirements.txt
 
-      - name: Run tests
+      - name: Check Python syntax
+        run: python -m compileall -q app database
+
+      - name: Run backend tests
         run: python -m pytest -v
+
+  frontend:
+    name: Frontend checks and build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: admin-web/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: admin-web
+        run: npm ci
+
+      - name: Lint frontend
+        working-directory: admin-web
+        run: npm run lint
+
+      - name: Build frontend
+        working-directory: admin-web
+        run: npm run build
+
+      - name: Publish frontend build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-web-dist
+          path: admin-web/dist/
+          if-no-files-found: error
+          retention-days: 7
