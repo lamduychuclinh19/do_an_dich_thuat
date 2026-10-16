@@ -17,9 +17,3 @@ GO
 IF COL_LENGTH(N'dbo.poi_change_request_details', N'previous_trigger_radius_meters') IS NULL
     ALTER TABLE dbo.poi_change_request_details ADD previous_trigger_radius_meters DECIMAL(6,2) NULL;
 GO
-IF COL_LENGTH(N'dbo.translation_change_request_details', N'previous_title') IS NULL
-    ALTER TABLE dbo.translation_change_request_details ADD previous_title NVARCHAR(200) NULL;
-GO
-IF COL_LENGTH(N'dbo.translation_change_request_details', N'previous_narration_text') IS NULL
-    ALTER TABLE dbo.translation_change_request_details ADD previous_narration_text NVARCHAR(MAX) NULL;
-GO

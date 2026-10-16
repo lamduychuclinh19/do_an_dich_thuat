@@ -267,30 +267,6 @@ function TranslationFormModal({
       setErrorMessage("");
       setFieldErrors({});
 
-      if (isShopOwner) {
-        const action = hasTranslations ? "cập nhật" : "tạo mới";
-        if (!window.confirm(`Cậu chắc chắn muốn gửi yêu cầu ${action} bản dịch để quản trị viên xét duyệt chứ?`)) {
-          return;
-        }
-        const narrationText = sourceMode === "file"
-          ? await textFile.text()
-          : formData.narration_text.trim();
-        await api.post("/api/content-requests", {
-          request_type: "TRANSLATION",
-          action: hasTranslations ? "UPDATE" : "CREATE",
-          target_poi_id: String(poiId),
-          details: {
-            poi_id: String(poiId),
-            title: formData.title.trim(),
-            narration_text: narrationText.trim(),
-          },
-        });
-        window.alert("Đã gửi yêu cầu. Bản dịch chỉ được cập nhật sau khi quản trị viên đồng ý.");
-        window.dispatchEvent(new Event("owner-content-requests-updated"));
-        onClose();
-        return;
-      }
-
       const response =
         sourceMode === "file"
           ? await saveTextFile()
@@ -327,7 +303,7 @@ function TranslationFormModal({
           getApiErrorMessage(
             error,
             isShopOwner
-              ? "Không thể gửi yêu cầu đến admin. Hãy thử lại."
+              ? "Không thể lưu bản dịch hoặc tạo audio. Hãy thử lại."
               : "Không thể tạo bản dịch hoặc audio. Hãy kiểm tra backend và Ollama."
           )
         );
@@ -503,9 +479,7 @@ function TranslationFormModal({
               disabled={isSaving}
             >
               {isSaving
-                ? (isShopOwner ? "Đang gửi yêu cầu..." : "Đang lưu...")
-                : isShopOwner
-                  ? "Gửi yêu cầu"
+                ? "Đang lưu..."
                 : hasTranslations
                   ? "Cập nhật"
                   : "Tạo"}

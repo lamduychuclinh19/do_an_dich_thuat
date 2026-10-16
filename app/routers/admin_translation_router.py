@@ -1,6 +1,6 @@
 """API quản trị Translation dùng chung cho SYSTEM_ADMIN và SHOP_OWNER."""
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 
 from app.dependencies.auth_dependency import require_back_office
 from app.schemas.translation_schema import (
@@ -16,10 +16,6 @@ router = APIRouter(
     prefix="/api/admin/translations",
     tags=["BACK OFFICE - Translations"],
 )
-
-
-def _require_review_request() -> None:
-    raise HTTPException(status_code=403, detail="Tạo/cập nhật bản dịch và audio phải gửi yêu cầu để SYSTEM_ADMIN duyệt.")
 
 
 @router.get(
@@ -47,7 +43,9 @@ async def create_from_vietnamese(
     current_person: dict = Depends(require_back_office),
 ):
     """Nhập một nội dung Việt và tự tạo năm ngôn ngữ cùng năm audio."""
-    _require_review_request()
+    return await translation_service.create_from_vietnamese_for_back_office(
+        data=data, current_person=current_person
+    )
 
 
 @router.post(
@@ -62,7 +60,12 @@ async def create_from_vietnamese_text_file(
     current_person: dict = Depends(require_back_office),
 ):
     """Tải một file TXT tiếng Việt và tự tạo đủ năm ngôn ngữ/audio."""
-    _require_review_request()
+    return await translation_service.create_from_vietnamese_text_file_for_back_office(
+        poi_id=poi_id,
+        title=title,
+        text_file=text_file,
+        current_person=current_person,
+    )
 
 
 @router.patch(
@@ -75,7 +78,9 @@ async def update_vietnamese_source(
     current_person: dict = Depends(require_back_office),
 ):
     """Sửa nguồn Việt rồi tự tạo lại bản dịch và audio của cả năm ngôn ngữ."""
-    _require_review_request()
+    return await translation_service.update_vietnamese_source_for_back_office(
+        poi_id=poi_id, data=data, current_person=current_person
+    )
 
 
 @router.patch(
@@ -89,7 +94,12 @@ async def update_vietnamese_source_from_text_file(
     current_person: dict = Depends(require_back_office),
 ):
     """Thay nguồn Việt bằng TXT rồi tự tạo lại đủ năm ngôn ngữ/audio."""
-    _require_review_request()
+    return await translation_service.update_vietnamese_source_from_text_file_for_back_office(
+        poi_id=poi_id,
+        text_file=text_file,
+        current_person=current_person,
+        title=title,
+    )
 
 
 @router.post(
@@ -101,7 +111,10 @@ async def regenerate_translation_audio(
     current_person: dict = Depends(require_back_office),
 ):
     """Tạo lại MP3 sau khi service kiểm tra vai trò và quyền sở hữu."""
-    _require_review_request()
+    return await translation_service.regenerate_translation_audio_for_back_office(
+        translation_id=translation_id,
+        current_person=current_person,
+    )
 
 
 @router.patch(

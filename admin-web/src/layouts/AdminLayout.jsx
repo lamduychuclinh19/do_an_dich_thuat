@@ -20,9 +20,7 @@ function AdminLayout() {
         window.matchMedia("(max-width: 760px)").matches
     );
     const [pendingRegistrationCount, setPendingRegistrationCount] = useState(0);
-    const [unreadOwnerNotifications, setUnreadOwnerNotifications] = useState(0);
     const [pendingPoiRequests, setPendingPoiRequests] = useState(0);
-    const [pendingTranslationRequests, setPendingTranslationRequests] = useState(0);
 
     useEffect(() => {
         const mediaQuery = window.matchMedia("(max-width: 760px)");
@@ -75,13 +73,11 @@ function AdminLayout() {
         if (session?.role !== "SYSTEM_ADMIN") return undefined;
         let isMounted = true;
         const refresh = async () => {
-            const [poiResult, translationResult] = await Promise.allSettled([
+            const [poiResult] = await Promise.allSettled([
                 api.get("/api/content-requests/admin?type=POI"),
-                api.get("/api/content-requests/admin?type=TRANSLATION"),
             ]);
             if (!isMounted) return;
             if (poiResult.status === "fulfilled") setPendingPoiRequests(poiResult.value.data.filter((item) => item.status === "PENDING").length);
-            if (translationResult.status === "fulfilled") setPendingTranslationRequests(translationResult.value.data.filter((item) => item.status === "PENDING").length);
         };
         refresh();
         const intervalId = window.setInterval(refresh, 20000);
@@ -95,31 +91,6 @@ function AdminLayout() {
         };
     }, [session?.role]);
 
-    useEffect(() => {
-        if (session?.role !== "SHOP_OWNER") {
-            setUnreadOwnerNotifications(0);
-            return undefined;
-        }
-        let isMounted = true;
-        const refresh = async () => {
-            try {
-                const response = await api.get("/api/content-requests/notifications");
-                if (isMounted) setUnreadOwnerNotifications(response.data.filter((item) => !item.is_read).length);
-            } catch { /* Keep the rest of the sidebar available during a temporary error. */ }
-        };
-        refresh();
-        const intervalId = window.setInterval(refresh, 20000);
-        window.addEventListener("owner-notifications-updated", refresh);
-        window.addEventListener("owner-content-requests-updated", refresh);
-        window.addEventListener("focus", refresh);
-        return () => {
-            isMounted = false;
-            window.clearInterval(intervalId);
-            window.removeEventListener("owner-notifications-updated", refresh);
-            window.removeEventListener("owner-content-requests-updated", refresh);
-            window.removeEventListener("focus", refresh);
-        };
-    }, [session?.role]);
 
     const handleLogout = () => {
         clearSession();
@@ -174,26 +145,13 @@ function AdminLayout() {
                                 <span className="nav-item-label">Duyệt địa điểm</span>
                                 {pendingPoiRequests > 0 && <span className="registration-pending-dot" title={`${pendingPoiRequests} yêu cầu chờ duyệt`} aria-label={`${pendingPoiRequests} yêu cầu chờ duyệt`} />}
                             </NavLink>
-                            <NavLink to="/translation-approvals" title="Duyệt bản dịch" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
-                                <span className="nav-item-icon" aria-hidden="true">✓</span>
-                                <span className="nav-item-label">Duyệt bản dịch</span>
-                                {pendingTranslationRequests > 0 && <span className="registration-pending-dot" title={`${pendingTranslationRequests} yêu cầu chờ duyệt`} aria-label={`${pendingTranslationRequests} yêu cầu chờ duyệt`} />}
-                            </NavLink>
                         </>
                     )}
 
                     {session?.role === "SHOP_OWNER" && (
-                        <NavLink to="/notifications" title="Thông báo" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
-                            <span className="nav-item-icon" aria-hidden="true">♧</span>
-                            <span className="nav-item-label">Thông báo</span>
-                            {unreadOwnerNotifications > 0 && <span className="registration-pending-dot" title={`${unreadOwnerNotifications} thông báo chưa đọc`} aria-label={`${unreadOwnerNotifications} thông báo chưa đọc`} />}
-                        </NavLink>
-                    )}
-
-                    {session?.role === "SHOP_OWNER" && (
-                        <NavLink to="/my-requests" title="Gửi yêu cầu" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+                        <NavLink to="/my-requests" title="Cổng thông tin" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
                             <span className="nav-item-icon" aria-hidden="true">▤</span>
-                            <span className="nav-item-label">Gửi yêu cầu</span>
+                            <span className="nav-item-label">Cổng thông tin</span>
                         </NavLink>
                     )}
 

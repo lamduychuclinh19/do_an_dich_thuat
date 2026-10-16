@@ -59,7 +59,8 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'dbo.peopl
 GO
 
 /* ================================================================
-   2. OWNER REGISTRATION REQUESTS (ERD poi_owner_registrations)
+   2. OWNER REGISTRATION REQUESTS 
+   Đây là bảng lưu các phiếu đăng ký thành chủ quán
    A pending request is not yet an account and cannot log in.
    ================================================================ */
 IF OBJECT_ID(N'dbo.poi_owner_registrations', N'U') IS NULL
@@ -107,7 +108,7 @@ END;
 GO
 
 /* ================================================================
-   3. POINTS OF INTEREST (ERD pois)
+   3. POINTS OF INTEREST 
    ================================================================ */
 IF OBJECT_ID(N'dbo.pois', N'U') IS NULL
 BEGIN
@@ -156,7 +157,7 @@ BEGIN
         WHERE p.role <> N'SHOP_OWNER'
     )
     BEGIN
-        ;THROW 51001, N'owner_id của POI phải thuộc tài khoản SHOP_OWNER.', 1;
+        ;THROW 51001, N'owner_id của địa điểm phải thuộc tài khoản SHOP_OWNER.', 1;
     END;
 END;
 GO
@@ -264,6 +265,7 @@ GO
 /* ================================================================
    5. CONTENT SUBMISSIONS AND REVIEW AUDIT (ERD poi_submission/audit_log)
    Keep POI and translation review references separate to avoid repeating
+   bảng này lưu những yêu cầu chỉnh sửa về địa điểm 
    the POI key through a translation row.
    ================================================================ */
 IF OBJECT_ID(N'dbo.poi_submission', N'U') IS NULL
@@ -292,62 +294,6 @@ BEGIN
 END;
 GO
 
-IF OBJECT_ID(N'dbo.translation_submission', N'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.translation_submission
-    (
-        id BIGINT IDENTITY(1,1) NOT NULL,
-        translation_id INT NOT NULL,
-        submitted_by_person_id INT NOT NULL,
-        created_at DATETIME2 NOT NULL CONSTRAINT DF_translation_submission_created_at DEFAULT (SYSUTCDATETIME()),
-        status NVARCHAR(10) NOT NULL CONSTRAINT DF_translation_submission_status DEFAULT (N'PENDING'),
-        reviewed_at DATETIME2 NULL,
-        reviewed_by_person_id INT NULL,
-        CONSTRAINT PK_translation_submission PRIMARY KEY (id),
-        CONSTRAINT FK_translation_submission_translation FOREIGN KEY (translation_id) REFERENCES dbo.translations(id),
-        CONSTRAINT FK_translation_submission_submitter FOREIGN KEY (submitted_by_person_id) REFERENCES dbo.people(id),
-        CONSTRAINT FK_translation_submission_reviewer FOREIGN KEY (reviewed_by_person_id) REFERENCES dbo.people(id),
-        CONSTRAINT CK_translation_submission_status CHECK (status IN (N'PENDING', N'APPROVED', N'REJECTED')),
-        CONSTRAINT CK_translation_submission_review CHECK
-        (
-            (status = N'PENDING' AND reviewed_at IS NULL AND reviewed_by_person_id IS NULL)
-            OR (status <> N'PENDING' AND reviewed_at IS NOT NULL AND reviewed_by_person_id IS NOT NULL)
-        )
-    );
-    CREATE INDEX IX_translation_submission_status_created ON dbo.translation_submission(status, created_at DESC);
-END;
-GO
-
-IF OBJECT_ID(N'dbo.audit_log', N'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.audit_log
-    (
-        id BIGINT IDENTITY(1,1) NOT NULL,
-        poi_submission_id BIGINT NULL,
-        translation_submission_id BIGINT NULL,
-        actor_person_id INT NOT NULL,
-        action NVARCHAR(20) NOT NULL,
-        created_at DATETIME2 NOT NULL CONSTRAINT DF_audit_log_created_at DEFAULT (SYSUTCDATETIME()),
-        admin_note NVARCHAR(2000) NULL,
-        CONSTRAINT PK_audit_log PRIMARY KEY (id),
-        CONSTRAINT FK_audit_log_poi_submission FOREIGN KEY (poi_submission_id) REFERENCES dbo.poi_submission(id),
-        CONSTRAINT FK_audit_log_translation_submission FOREIGN KEY (translation_submission_id) REFERENCES dbo.translation_submission(id),
-        CONSTRAINT FK_audit_log_actor FOREIGN KEY (actor_person_id) REFERENCES dbo.people(id),
-        CONSTRAINT CK_audit_log_one_submission CHECK
-        (
-            (poi_submission_id IS NOT NULL AND translation_submission_id IS NULL)
-            OR (poi_submission_id IS NULL AND translation_submission_id IS NOT NULL)
-        ),
-        CONSTRAINT CK_audit_log_action CHECK (action IN (N'SUBMITTED', N'APPROVED', N'REJECTED', N'UPDATED'))
-    );
-    CREATE INDEX IX_audit_log_poi_submission ON dbo.audit_log(poi_submission_id, created_at DESC) WHERE poi_submission_id IS NOT NULL;
-    CREATE INDEX IX_audit_log_translation_submission ON dbo.audit_log(translation_submission_id, created_at DESC) WHERE translation_submission_id IS NOT NULL;
-END;
-GO
-
-/* ================================================================
-   6. OWNER NOTIFICATIONS (ERD owner_notifications)
-   ================================================================ */
 /* Review requests store their typed content separately from the live POI
    and translations. This keeps pending edits out of public data until approval. */
 IF OBJECT_ID(N'dbo.content_change_requests', N'U') IS NULL
@@ -411,41 +357,6 @@ BEGIN
 END;
 GO
 
-IF OBJECT_ID(N'dbo.translation_change_request_details', N'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.translation_change_request_details
-    (
-        request_id BIGINT NOT NULL,
-        poi_id NVARCHAR(10) NOT NULL,
-        title NVARCHAR(200) NOT NULL,
-        narration_text NVARCHAR(MAX) NOT NULL,
-        previous_title NVARCHAR(200) NULL,
-        previous_narration_text NVARCHAR(MAX) NULL,
-        CONSTRAINT PK_translation_change_request_details PRIMARY KEY (request_id),
-        CONSTRAINT FK_translation_change_request_details_request FOREIGN KEY (request_id) REFERENCES dbo.content_change_requests(id) ON DELETE CASCADE,
-        CONSTRAINT FK_translation_change_request_details_poi FOREIGN KEY (poi_id) REFERENCES dbo.pois(id)
-    );
-END;
-GO
-
-IF OBJECT_ID(N'dbo.owner_notifications', N'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.owner_notifications
-    (
-        id BIGINT IDENTITY(1,1) NOT NULL,
-        owner_person_id INT NOT NULL,
-        notification_type NVARCHAR(30) NOT NULL,
-        message NVARCHAR(MAX) NOT NULL,
-        created_at DATETIME2 NOT NULL CONSTRAINT DF_owner_notifications_created_at DEFAULT (SYSUTCDATETIME()),
-        is_read BIT NOT NULL CONSTRAINT DF_owner_notifications_is_read DEFAULT (0),
-        CONSTRAINT PK_owner_notifications PRIMARY KEY (id),
-        CONSTRAINT FK_owner_notifications_owner FOREIGN KEY (owner_person_id) REFERENCES dbo.people(id),
-        CONSTRAINT CK_owner_notifications_type CHECK (notification_type IN (N'REGISTRATION', N'POI_REVIEW', N'TRANSLATION_REVIEW', N'SYSTEM'))
-    );
-    CREATE INDEX IX_owner_notifications_owner_unread ON dbo.owner_notifications(owner_person_id, is_read, created_at DESC);
-END;
-GO
-
 /* ================================================================
    7. PAYMENT TRANSACTIONS
    Anonymous sessions are represented by a UUID; no personal account is
@@ -506,52 +417,6 @@ BEGIN
     )
     BEGIN
         ;THROW 51004, N'Người kiểm duyệt POI phải là SYSTEM_ADMIN.', 1;
-    END;
-END;
-GO
-
-CREATE OR ALTER TRIGGER dbo.TR_translation_submission_roles
-ON dbo.translation_submission
-AFTER INSERT, UPDATE
-AS
-BEGIN
-    SET NOCOUNT ON;
-    IF EXISTS
-    (
-        SELECT 1 FROM inserted AS s
-        INNER JOIN dbo.people AS owner_account ON owner_account.id = s.submitted_by_person_id
-        WHERE owner_account.role <> N'SHOP_OWNER'
-    )
-    BEGIN
-        ;THROW 51005, N'Người gửi phiếu bản dịch phải là SHOP_OWNER.', 1;
-    END;
-
-    IF EXISTS
-    (
-        SELECT 1 FROM inserted AS s
-        INNER JOIN dbo.people AS reviewer ON reviewer.id = s.reviewed_by_person_id
-        WHERE reviewer.role <> N'SYSTEM_ADMIN'
-    )
-    BEGIN
-        ;THROW 51006, N'Người kiểm duyệt bản dịch phải là SYSTEM_ADMIN.', 1;
-    END;
-END;
-GO
-
-CREATE OR ALTER TRIGGER dbo.TR_owner_notifications_role
-ON dbo.owner_notifications
-AFTER INSERT, UPDATE
-AS
-BEGIN
-    SET NOCOUNT ON;
-    IF EXISTS
-    (
-        SELECT 1 FROM inserted AS n
-        INNER JOIN dbo.people AS owner_account ON owner_account.id = n.owner_person_id
-        WHERE owner_account.role <> N'SHOP_OWNER'
-    )
-    BEGIN
-        ;THROW 51007, N'Thông báo chủ quán phải gắn với tài khoản SHOP_OWNER.', 1;
     END;
 END;
 GO

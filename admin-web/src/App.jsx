@@ -9,10 +9,8 @@ import ShopOwnerPage from "./pages/ShopOwnerPage";
 import TranslationPage from "./pages/TranslationPage";
 import OwnerRegistrationPage from "./pages/OwnerRegistrationPage";
 import OwnerSignupPage from "./pages/OwnerSignupPage";
-import OwnerNotificationsPage from "./pages/OwnerNotificationsPage";
 import OwnerRequestsPage from "./pages/OwnerRequestsPage";
 import PoiApprovalPage from "./pages/PoiApprovalPage";
-import TranslationApprovalPage from "./pages/TranslationApprovalPage";
 
 function App() {
   return (
@@ -33,12 +31,10 @@ function App() {
               <Route path="/shop-owners" element={<ShopOwnerPage />} />
               <Route path="/owner-registrations" element={<OwnerRegistrationPage />} />
               <Route path="/poi-approvals" element={<PoiApprovalPage />} />
-              <Route path="/translation-approvals" element={<TranslationApprovalPage />} />
             </Route>
 
             <Route element={<ProtectedRoute allowedRoles={["SHOP_OWNER"]} />}>
               <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/notifications" element={<OwnerNotificationsPage />} />
               <Route path="/my-requests" element={<OwnerRequestsPage />} />
             </Route>
           </Route>

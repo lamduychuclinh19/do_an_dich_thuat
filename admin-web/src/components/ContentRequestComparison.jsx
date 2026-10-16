@@ -1,4 +1,5 @@
 import "./ContentRequestComparison.css";
+import LocationMap from "./LocationMap";
 
 const fieldsByType = {
   POI: [
@@ -69,11 +70,21 @@ export default function ContentRequestComparison({
     </dl>
   );
 
+  const renderLocation = (content, title) => type === "POI" ? (
+    <LocationMap
+      latitude={content.latitude}
+      longitude={content.longitude}
+      radius={content.trigger_radius_meters}
+      title={title}
+    />
+  ) : null;
+
   if (!isUpdate) {
     return (
       <section className="request-comparison request-comparison-create">
         <h3>Nội dung chủ quán gửi</h3>
         {renderFields(details, "new")}
+        {renderLocation(details, "Vị trí địa điểm được đề xuất")}
       </section>
     );
   }
@@ -86,6 +97,7 @@ export default function ContentRequestComparison({
           Yêu cầu này được gửi trước khi hệ thống lưu ảnh chụp nội dung cũ.
         </p>
         {renderFields(details, "new")}
+        {renderLocation(details, "Vị trí địa điểm được đề xuất")}
       </section>
     );
   }
@@ -95,10 +107,12 @@ export default function ContentRequestComparison({
       <div className="request-comparison-column request-comparison-new">
         <h3>Nội dung mới đề xuất</h3>
         {renderFields(details, "new")}
+        {renderLocation(details, "Vị trí mới đề xuất")}
       </div>
       <div className="request-comparison-column request-comparison-old">
         <h3>Nội dung cũ trước khi sửa</h3>
         {renderFields(previousDetails, "old")}
+        {renderLocation(previousDetails, "Vị trí cũ")}
       </div>
     </section>
   );

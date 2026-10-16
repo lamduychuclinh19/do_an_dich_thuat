@@ -214,7 +214,7 @@ class AudioService:
             if isinstance(error, WSServerHandshakeError) and error.status == 403:
                 detail = (
                     "Dịch vụ Edge-TTS từ chối kết nối (HTTP 403). "
-                    "Phiếu vẫn chưa được duyệt và dữ liệu chưa thay đổi. "
+                    "Nội dung chưa được lưu vì chưa tạo đủ audio. "
                     "Hãy thử lại sau hoặc thử một tuyến mạng khác."
                 )
             else:

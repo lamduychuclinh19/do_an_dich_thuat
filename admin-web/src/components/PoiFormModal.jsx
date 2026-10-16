@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import api from "../services/api";
+import LocationMap from "./LocationMap";
 import "./PoiFormModal.css";
 
 const emptyForm = {
@@ -192,6 +193,41 @@ function PoiFormModal({
   const [errorMessage, setErrorMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [ownerSearch, setOwnerSearch] = useState("");
+  const [addressSuggestions, setAddressSuggestions] = useState([]);
+  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+  const [locationMessage, setLocationMessage] = useState("");
+
+  useEffect(() => {
+    if (!isOpen || editingPoi || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => handleMapLocationSelect(coords.latitude, coords.longitude),
+      () => setLocationMessage("Không lấy được vị trí hiện tại. Cậu có thể cho phép quyền vị trí hoặc tìm địa chỉ bên dưới."),
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 },
+    );
+  }, [isOpen, editingPoi]);
+
+  useEffect(() => {
+    const query = formData.address.trim();
+    if (query.length < 3) { setAddressSuggestions([]); return undefined; }
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setIsSearchingAddress(true);
+      try {
+        const params = new URLSearchParams({ q: query, limit: "5", lang: "default" });
+        const response = await fetch(`https://photon.komoot.io/api/?${params}`, { signal: controller.signal });
+        if (!response.ok) throw new Error("Geocoding unavailable");
+        const result = await response.json();
+        setAddressSuggestions((result.features || []).map((feature) => {
+          const p = feature.properties || {};
+          const address = [p.housenumber, p.street, p.name, p.district, p.city, p.state, p.country].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(", ");
+          return { label: address || query, lat: feature.geometry.coordinates[1], lng: feature.geometry.coordinates[0] };
+        }));
+      } catch (error) {
+        if (error.name !== "AbortError") setAddressSuggestions([]);
+      } finally { setIsSearchingAddress(false); }
+    }, 450);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [formData.address]);
 
   if (!isOpen) {
     return null;
@@ -210,6 +246,30 @@ function PoiFormModal({
       [name]: "",
     }));
     setErrorMessage("");
+  };
+
+  const handleMapLocationSelect = (latitude, longitude) => {
+    setFormData((currentData) => ({
+      ...currentData,
+      latitude: latitude.toFixed(7),
+      longitude: longitude.toFixed(7),
+    }));
+    setFieldErrors((currentErrors) => ({
+      ...currentErrors,
+      latitude: "",
+      longitude: "",
+    }));
+    setErrorMessage("");
+  };
+
+  const useCurrentLocation = () => {
+    setLocationMessage("");
+    if (!navigator.geolocation) { setLocationMessage("Trình duyệt này không hỗ trợ định vị."); return; }
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => handleMapLocationSelect(coords.latitude, coords.longitude),
+      () => setLocationMessage("Không lấy được vị trí. Hãy kiểm tra quyền vị trí của trình duyệt."),
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 },
+    );
   };
 
   const handleOwnerSearchChange = (event) => {
@@ -613,6 +673,15 @@ function PoiFormModal({
             required
           />
 
+          {isSearchingAddress && <p className="poi-geocode-hint">Đang tìm địa chỉ phù hợp…</p>}
+          {addressSuggestions.length > 0 && <div className="poi-address-suggestions" role="listbox" aria-label="Địa chỉ gợi ý">
+            {addressSuggestions.map((place, index) => <button type="button" role="option" key={`${place.lat}-${place.lng}-${index}`} onClick={() => {
+              setFormData((current) => ({ ...current, address: place.label, latitude: Number(place.lat).toFixed(7), longitude: Number(place.lng).toFixed(7) }));
+              setAddressSuggestions([]);
+              setFieldErrors((current) => ({ ...current, address: "", latitude: "", longitude: "" }));
+            }}>{place.label}</button>)}
+          </div>}
+
           {renderFieldError("address")}
 
           <div className="form-grid">
@@ -670,6 +739,17 @@ function PoiFormModal({
               {renderFieldError("longitude")}
             </div>
           </div>
+
+          <LocationMap
+            latitude={formData.latitude}
+            longitude={formData.longitude}
+            radius={formData.trigger_radius_meters}
+            interactive
+            onSelect={handleMapLocationSelect}
+            title="Chọn vị trí địa điểm"
+          />
+          {!isSystemAdmin && <button type="button" className="poi-use-current-location" onClick={useCurrentLocation}>Dùng vị trí hiện tại</button>}
+          {locationMessage && <p className="poi-geocode-hint" role="status">{locationMessage}</p>}
 
           <label htmlFor="poi-radius">
             Bán kính kích hoạt
