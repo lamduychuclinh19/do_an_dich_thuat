@@ -75,7 +75,8 @@ export default function OwnerSignupPage() {
 
     setBusy(true);
     try {
-      const { confirmPassword, ...registration } = form;
+      const registration = { ...form };
+      delete registration.confirmPassword;
       await api.post("/api/auth/shop-owner-registration", registration);
       setMessage("Phiếu đăng ký đã được gửi. Bạn sẽ nhận kết quả qua email sau khi admin xem xét.");
       setForm(initialForm);
