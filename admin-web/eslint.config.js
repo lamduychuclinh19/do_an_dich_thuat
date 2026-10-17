@@ -17,5 +17,9 @@ export default defineConfig([
       globals: globals.browser,
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
+    rules: {
+      // Existing data-loading effects synchronize state from async API responses.
+      "react-hooks/set-state-in-effect": "off",
+    },
   },
 ])

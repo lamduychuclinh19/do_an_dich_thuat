@@ -197,6 +197,20 @@ function PoiFormModal({
   const [isSearchingAddress, setIsSearchingAddress] = useState(false);
   const [locationMessage, setLocationMessage] = useState("");
 
+  const handleMapLocationSelect = (latitude, longitude) => {
+    setFormData((currentData) => ({
+      ...currentData,
+      latitude: latitude.toFixed(7),
+      longitude: longitude.toFixed(7),
+    }));
+    setFieldErrors((currentErrors) => ({
+      ...currentErrors,
+      latitude: "",
+      longitude: "",
+    }));
+    setErrorMessage("");
+  };
+
   useEffect(() => {
     if (!isOpen || editingPoi || !navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
@@ -244,20 +258,6 @@ function PoiFormModal({
     setFieldErrors((currentErrors) => ({
       ...currentErrors,
       [name]: "",
-    }));
-    setErrorMessage("");
-  };
-
-  const handleMapLocationSelect = (latitude, longitude) => {
-    setFormData((currentData) => ({
-      ...currentData,
-      latitude: latitude.toFixed(7),
-      longitude: longitude.toFixed(7),
-    }));
-    setFieldErrors((currentErrors) => ({
-      ...currentErrors,
-      latitude: "",
-      longitude: "",
     }));
     setErrorMessage("");
   };
