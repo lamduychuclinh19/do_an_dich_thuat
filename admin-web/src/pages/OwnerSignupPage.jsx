@@ -92,7 +92,6 @@ export default function OwnerSignupPage() {
     <main className="owner-signup">
       <form className="owner-signup-card" onSubmit={submit} noValidate>
         <header className="owner-signup-heading">
-          <p>DÀNH CHO CHỦ QUÁN</p>
           <h1>Đăng ký tài khoản</h1>
           <span>Thông tin của bạn sẽ được gửi đến quản trị viên để xét duyệt.</span>
         </header>
@@ -125,12 +124,15 @@ export default function OwnerSignupPage() {
 
         <label className="signup-field" htmlFor="signup-email">
           Email
-          <input id="signup-email" name="email" type="email" value={form.email} onChange={change} autoComplete="email" required />
           <small className="signup-field-hint">Thông báo phê duyệt về tài khoản sẽ được gửi về email này</small>
+          <input id="signup-email" name="email" type="email" value={form.email} onChange={change} autoComplete="email" required />
         </label>
 
         <label className="signup-field" htmlFor="signup-password">
           Mật khẩu
+          {fieldErrors.password
+            ? <small className="signup-field-error" id="signup-password-error">{fieldErrors.password}</small>
+            : <small className="signup-field-hint" id="signup-password-hint">Ít nhất 8 ký tự, gồm cả chữ và số.</small>}
           <input
             id="signup-password"
             name="password"
@@ -142,9 +144,6 @@ export default function OwnerSignupPage() {
             aria-describedby={fieldErrors.password ? "signup-password-error" : "signup-password-hint"}
             required
           />
-          {fieldErrors.password
-            ? <small className="signup-field-error" id="signup-password-error">{fieldErrors.password}</small>
-            : <small className="signup-field-hint" id="signup-password-hint">Ít nhất 8 ký tự, gồm cả chữ và số.</small>}
         </label>
 
         <label className="signup-field" htmlFor="signup-confirm-password">
