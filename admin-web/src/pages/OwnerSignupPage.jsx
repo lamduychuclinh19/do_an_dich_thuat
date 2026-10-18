@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
+import { validateVietnamPhone } from "../utils/vietnamPhone";
 import "./OwnerSignupPage.css";
 
 const initialForm = {
@@ -18,6 +19,9 @@ function validateField(name, value, form) {
     if (!/^[A-Za-z0-9_.-]{4,50}$/.test(value)) {
       return "Tên đăng nhập cần từ 4–50 ký tự, chỉ gồm chữ, số, dấu chấm, gạch dưới hoặc gạch ngang.";
     }
+  }
+  if (name === "phone" && value) {
+    return validateVietnamPhone(value);
   }
   if (name === "password" && value) {
     if (value.length < 8 || !/\p{L}/u.test(value) || !/\p{N}/u.test(value)) {
@@ -65,6 +69,7 @@ export default function OwnerSignupPage() {
 
     const nextErrors = {
       username: validateField("username", form.username, form),
+      phone: validateVietnamPhone(form.phone, { requireComplete: true }),
       password: validateField("password", form.password, form),
       confirmPassword: form.password !== form.confirmPassword
         ? "Mật khẩu xác nhận chưa khớp."
@@ -119,7 +124,21 @@ export default function OwnerSignupPage() {
 
         <label className="signup-field" htmlFor="signup-phone">
           Số điện thoại
-          <input id="signup-phone" name="phone" type="tel" pattern="0[0-9]{9}" placeholder="0912345678" value={form.phone} onChange={change} autoComplete="tel" required />
+          <input
+            id="signup-phone"
+            name="phone"
+            type="tel"
+            inputMode="numeric"
+            pattern="0[0-9]{9}"
+            placeholder="0912345678"
+            value={form.phone}
+            onChange={change}
+            autoComplete="tel"
+            aria-invalid={Boolean(fieldErrors.phone)}
+            aria-describedby={fieldErrors.phone ? "signup-phone-error" : undefined}
+            required
+          />
+          {fieldErrors.phone && <small className="signup-field-error" id="signup-phone-error">{fieldErrors.phone}</small>}
         </label>
 
         <label className="signup-field" htmlFor="signup-email">

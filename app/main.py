@@ -1,3 +1,5 @@
+import edge_tts
+from edge_tts.constants import SEC_MS_GEC_VERSION
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -72,4 +74,6 @@ def health_check():
     return {
         "status": "ok",
         "message": "Backend đang hoạt động",
+        "edge_tts_version": edge_tts.__version__,
+        "edge_tts_handshake": SEC_MS_GEC_VERSION,
     }

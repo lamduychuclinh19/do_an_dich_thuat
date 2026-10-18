@@ -1,4 +1,4 @@
-"""Nghiệp vụ POI dùng chung cho public và khu quản trị chủ địa điểm."""
+"""Nghiệp vụ POI dùng chung cho public và khu quản trị Chủ địa điểm."""
 
 from math import atan2, cos, radians, sin, sqrt
 
@@ -15,7 +15,7 @@ class PoiService:
 
     @staticmethod
     def _raise_not_found() -> None:
-        """Không tiết lộ POI không tồn tại hay thuộc một chủ quán khác."""
+        """Không tiết lộ POI không tồn tại hay thuộc một Chủ địa điểm khác."""
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Không tìm thấy địa điểm",
@@ -254,7 +254,7 @@ class PoiService:
         return poi_repository.get_active()
 
     def get_all_pois_for_owner(self, owner_id: int) -> list[dict]:
-        """Chủ quán xem toàn bộ POI của mình, kể cả POI đang ẩn."""
+        """Chủ địa điểm xem toàn bộ POI của mình, kể cả POI đang ẩn."""
         return poi_repository.get_all_for_owner(owner_id)
 
     # Giữ tên cũ để nơi khác chưa kịp đổi vẫn có thể gọi service.

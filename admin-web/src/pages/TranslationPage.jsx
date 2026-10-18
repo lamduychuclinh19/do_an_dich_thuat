@@ -108,6 +108,8 @@ function TranslationPage() {
         useState(true);
     const [isLoadingTranslations, setIsLoadingTranslations] =
         useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [isPoiSuggestionsOpen, setIsPoiSuggestionsOpen] = useState(false);
     const [changingTranslationId, setChangingTranslationId] =
         useState(null);
     const [errorMessage, setErrorMessage] = useState("");
@@ -263,6 +265,48 @@ function TranslationPage() {
         .slice(0, 10)
         .map(({ poi }) => poi);
 
+    const refreshData = async () => {
+        try {
+            setIsRefreshing(true);
+            setErrorMessage("");
+            const poiResponse = await api.get("/api/admin/pois");
+            const currentPois = Array.isArray(poiResponse.data)
+                ? poiResponse.data
+                : [];
+            setPois(currentPois);
+
+            if (selectedPoiId && currentPois.some((poi) => String(poi.id) === selectedPoiId)) {
+                setIsLoadingTranslations(true);
+                const translationResponse = await api.get(
+                    `/api/admin/translations/poi/${selectedPoiId}`
+                );
+                setTranslations(Array.isArray(translationResponse.data)
+                    ? translationResponse.data
+                    : []);
+            } else if (selectedPoiId) {
+                setSelectedPoiId("");
+                setPoiSearch("");
+                setTranslations([]);
+            }
+        } catch (error) {
+            setErrorMessage(getApiErrorMessage(
+                error,
+                "Không thể làm mới danh sách địa điểm và bản dịch."
+            ));
+        } finally {
+            setIsRefreshing(false);
+            setIsLoadingTranslations(false);
+        }
+    };
+
+    const handleSelectPoi = (poi) => {
+        setPoiSearch(getPoiOptionLabel(poi));
+        setSelectedPoiId(String(poi.id));
+        setTranslations([]);
+        setIsPoiSuggestionsOpen(false);
+        setErrorMessage("");
+    };
+
     const handlePoiSearchChange = (event) => {
         const nextValue = event.target.value;
         const normalizedValue = normalizeSearchValue(nextValue);
@@ -314,13 +358,10 @@ function TranslationPage() {
                 <div>
                     <p>QUẢN LÝ NỘI DUNG</p>
                     <h1>Bản dịch đa ngôn ngữ</h1>
+                    <span>Nơi tạo các bản dịch và tạo audio cho các bản dịch</span>
                 </div>
 
                 <div className="translation-heading-actions">
-                    <div className="translation-count">
-                        <strong>{filteredTranslations.length}</strong>
-                        <span>trên {translations.length} bản dịch</span>
-                    </div>
 
                     {!isSystemAdmin && (
                         <button
@@ -338,35 +379,68 @@ function TranslationPage() {
             </div>
 
             <section className="translation-filter-panel">
+                {isSystemAdmin && (
+                    <div className="translation-admin-list-heading">
+                        <div>
+                            <h2>Danh sách bản dịch</h2>
+                            <p>{selectedPoi ? selectedPoi.name : "Chọn địa điểm để xem các bản dịch."}</p>
+                        </div>
+                        <button
+                            type="button"
+                            className="admin-page-refresh"
+                            onClick={refreshData}
+                            disabled={isRefreshing || isLoadingPois}
+                        >
+                            {isRefreshing || isLoadingPois ? "Đang tải..." : "Làm mới"}
+                        </button>
+                    </div>
+                )}
                 <div className="translation-filter-field">
                     <label htmlFor="translation-poi">
                         Lọc theo địa điểm
                     </label>
 
-                    <input
-                        id="translation-poi"
-                        className="translation-filter-control"
-                        type="search"
-                        list="translation-poi-options"
-                        value={poiSearch}
-                        onChange={handlePoiSearchChange}
-                        placeholder="Gõ mã, tên hoặc địa chỉ địa điểm..."
-                        autoComplete="off"
-                        disabled={isLoadingPois || pois.length === 0}
-                        aria-invalid={Boolean(
-                            poiSearch && !selectedPoiId
+                    <div className="translation-poi-autocomplete">
+                        <input
+                            id="translation-poi"
+                            className="translation-filter-control"
+                            type="search"
+                            value={poiSearch}
+                            onChange={(event) => {
+                                handlePoiSearchChange(event);
+                                setIsPoiSuggestionsOpen(true);
+                            }}
+                            onFocus={() => setIsPoiSuggestionsOpen(true)}
+                            onBlur={() => setIsPoiSuggestionsOpen(false)}
+                            placeholder="Gõ mã, tên hoặc địa chỉ địa điểm..."
+                            autoComplete="off"
+                            disabled={isLoadingPois || pois.length === 0}
+                            aria-invalid={Boolean(poiSearch && !selectedPoiId)}
+                            aria-describedby="translation-poi-hint"
+                            aria-expanded={Boolean(
+                                isPoiSuggestionsOpen && normalizedPoiSearch && !selectedPoiId
+                            )}
+                        />
+                        {isPoiSuggestionsOpen && normalizedPoiSearch && !selectedPoiId && (
+                            <div className="translation-poi-suggestions" role="listbox" aria-label="Gợi ý địa điểm">
+                                {poiSuggestions.length ? poiSuggestions.map((poi) => (
+                                    <button
+                                        key={poi.id}
+                                        type="button"
+                                        role="option"
+                                        aria-selected={false}
+                                        onMouseDown={(event) => event.preventDefault()}
+                                        onClick={() => handleSelectPoi(poi)}
+                                    >
+                                        <strong>#{poi.id} — {poi.name}</strong>
+                                        <span>{poi.address || "Chưa có địa chỉ"}</span>
+                                    </button>
+                                )) : (
+                                    <p>Không tìm thấy địa điểm phù hợp.</p>
+                                )}
+                            </div>
                         )}
-                        aria-describedby="translation-poi-hint"
-                    />
-
-                    <datalist id="translation-poi-options">
-                        {poiSuggestions.map((poi) => (
-                            <option
-                                key={poi.id}
-                                value={getPoiOptionLabel(poi)}
-                            />
-                        ))}
-                    </datalist>
+                    </div>
 
                     {selectedPoi ? (
                         <div

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import api from "../services/api";
+import { formatServerDateTime } from "../utils/dateTime";
 import "./ShopOwnerPage.css";
 
 const EMPTY_FORM = {
@@ -24,7 +25,7 @@ function formatDateTime(value) {
     return "Chưa đăng nhập";
   }
 
-  return new Date(value).toLocaleString("vi-VN");
+  return formatServerDateTime(value, "Chưa đăng nhập");
 }
 
 function ShopOwnerPage() {
@@ -62,7 +63,7 @@ function ShopOwnerPage() {
       setErrorMessage(
         getApiErrorMessage(
           error,
-          "Không thể tải danh sách chủ quán."
+          "Không thể tải danh sách Chủ địa điểm."
         )
       );
     } finally {
@@ -171,19 +172,29 @@ function ShopOwnerPage() {
       <div className="owner-heading">
         <div>
           <p>QUẢN LÝ NỘI DUNG</p>
-          <h1>Chủ quán</h1>
-          
-        </div>
-
-        <div className="owner-heading-actions">
-          <div className="owner-summary">
-            <strong>{shopOwners.length}</strong>
-            <span>chủ quán</span>
-          </div>
+          <h1>Chủ địa điểm</h1>
+          <span>Nơi quản lý các tài khoản của các Chủ địa điểm</span>
         </div>
       </div>
 
       <section className="owner-container">
+        <div className="owner-list-heading">
+          <div>
+            <h2>Danh sách Chủ địa điểm</h2>
+            <p>Hiển thị {shopOwners.length} Chủ địa điểm</p>
+          </div>
+          <button
+            className="admin-page-refresh"
+            type="button"
+            onClick={() => {
+              setIsLoading(true);
+              loadShopOwners();
+            }}
+            disabled={isLoading}
+          >
+            {isLoading ? "Đang tải..." : "Làm mới"}
+          </button>
+        </div>
         <div className="owner-toolbar">
           <div className="owner-search-box">
             <span>⌕</span>
@@ -238,7 +249,7 @@ function ShopOwnerPage() {
               ) : shopOwners.length === 0 ? (
                 <tr>
                   <td colSpan="10" className="owner-empty-cell">
-                    Không tìm thấy chủ quán phù hợp.
+                    Không tìm thấy Chủ địa điểm phù hợp.
                   </td>
                 </tr>
               ) : (
@@ -368,7 +379,7 @@ function CreateShopOwnerModal({ isOpen, onClose, onCreated }) {
       handleClose();
     } catch (error) {
       setErrorMessage(
-        getApiErrorMessage(error, "Không thể tạo tài khoản chủ quán.")
+        getApiErrorMessage(error, "Không thể tạo tài khoản Chủ địa điểm.")
       );
     } finally {
       setIsSaving(false);
@@ -386,7 +397,7 @@ function CreateShopOwnerModal({ isOpen, onClose, onCreated }) {
         <div className="owner-modal-heading">
           <div>
             <p>TÀI KHOẢN MỚI</p>
-            <h2 id="create-owner-title">Thêm chủ quán</h2>
+            <h2 id="create-owner-title">Thêm Chủ địa điểm</h2>
           </div>
           <button type="button" onClick={handleClose}>×</button>
         </div>

@@ -60,7 +60,7 @@ GO
 
 /* ================================================================
    2. OWNER REGISTRATION REQUESTS 
-   Đây là bảng lưu các phiếu đăng ký thành chủ quán
+   Đây là bảng lưu các phiếu đăng ký thành Chủ địa điểm
    A pending request is not yet an account and cannot log in.
    ================================================================ */
 IF OBJECT_ID(N'dbo.poi_owner_registrations', N'U') IS NULL
@@ -422,11 +422,6 @@ END;
 GO
 
 /* ================================================================
-   9. SCHEMA CHECK
+   9. insert dữ liệu
    ================================================================ */
-SELECT s.name AS schema_name, t.name AS table_name
-FROM sys.tables AS t
-INNER JOIN sys.schemas AS s ON s.schema_id = t.schema_id
-WHERE s.name = N'dbo'
-ORDER BY t.name;
-GO
+

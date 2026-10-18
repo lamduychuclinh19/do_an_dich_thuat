@@ -304,7 +304,7 @@ function TranslationFormModal({
             error,
             isShopOwner
               ? "Không thể lưu bản dịch hoặc tạo audio. Hãy thử lại."
-              : "Không thể tạo bản dịch hoặc audio. Hãy kiểm tra backend và Ollama."
+              : "Không thể tạo bản dịch hoặc audio. Hãy kiểm tra backend và Ollama đang chạy."
           )
         );
       }

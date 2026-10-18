@@ -82,7 +82,7 @@ export default function ContentRequestComparison({
   if (!isUpdate) {
     return (
       <section className="request-comparison request-comparison-create">
-        <h3>Nội dung chủ quán gửi</h3>
+        <h3>Nội dung Chủ địa điểm gửi</h3>
         {renderFields(details, "new")}
         {renderLocation(details, "Vị trí địa điểm được đề xuất")}
       </section>

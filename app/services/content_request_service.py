@@ -12,7 +12,7 @@ from app.services.translation_service import translation_service
 class ContentRequestService:
     def submit(self, data: ContentRequestCreate, owner: dict) -> dict:
         if owner.get("role") != "SHOP_OWNER":
-            raise HTTPException(status_code=403, detail="Chỉ chủ quán mới được gửi yêu cầu thay đổi nội dung")
+            raise HTTPException(status_code=403, detail="Chỉ Chủ địa điểm mới được gửi yêu cầu thay đổi nội dung")
         details = dict(data.details)
         previous_details = None
         target_id = str(data.target_poi_id or details.get("poi_id") or "").strip()
@@ -30,7 +30,7 @@ class ContentRequestService:
                 target_id = str(data.target_poi_id or "").strip()
                 current = poi_repository.get_by_id_for_owner(target_id, owner["id"])
                 if not current:
-                    raise HTTPException(status_code=404, detail="Không tìm thấy địa điểm của chủ quán")
+                    raise HTTPException(status_code=404, detail="Không tìm thấy địa điểm của Chủ địa điểm")
                 previous_details = {
                     key: current[key]
                     for key in (
@@ -49,7 +49,7 @@ class ContentRequestService:
             target_id = str(target_id).strip()
             poi = poi_repository.get_by_id_for_owner(target_id, owner["id"])
             if not poi:
-                raise HTTPException(status_code=404, detail="Không tìm thấy địa điểm của chủ quán")
+                raise HTTPException(status_code=404, detail="Không tìm thấy địa điểm của Chủ địa điểm")
             existing = translation_service.get_all_translations_for_back_office(
                 target_id, {"id": owner["id"], "role": "SHOP_OWNER"}
             )
@@ -145,7 +145,7 @@ class ContentRequestService:
 
     def owner_requests(self, owner: dict) -> list[dict]:
         if owner.get("role") != "SHOP_OWNER":
-            raise HTTPException(status_code=403, detail="Chức năng chỉ dành cho chủ quán")
+            raise HTTPException(status_code=403, detail="Chức năng chỉ dành cho Chủ địa điểm")
         items = content_request_repository.list_for_owner(owner["id"])
         for item in items:
             self._restore_legacy_pending_snapshot(item)
@@ -192,12 +192,12 @@ class ContentRequestService:
 
     def owner_notifications(self, owner: dict) -> list[dict]:
         if owner.get("role") != "SHOP_OWNER":
-            raise HTTPException(status_code=403, detail="Chức năng chỉ dành cho chủ quán")
+            raise HTTPException(status_code=403, detail="Chức năng chỉ dành cho Chủ địa điểm")
         return content_request_repository.notifications(owner["id"])
 
     def mark_notification_read(self, notification_id: int, owner: dict) -> None:
         if owner.get("role") != "SHOP_OWNER":
-            raise HTTPException(status_code=403, detail="Chức năng chỉ dành cho chủ quán")
+            raise HTTPException(status_code=403, detail="Chức năng chỉ dành cho Chủ địa điểm")
         if not content_request_repository.mark_notification_read(owner["id"], notification_id):
             raise HTTPException(status_code=404, detail="Không tìm thấy thông báo")
 

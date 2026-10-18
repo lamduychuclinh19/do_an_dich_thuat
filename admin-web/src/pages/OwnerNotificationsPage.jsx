@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import api from "../services/api";
+import { formatServerDateTime } from "../utils/dateTime";
 import "./OwnerNotificationsPage.css";
 
 export default function OwnerNotificationsPage() {
@@ -43,7 +44,7 @@ export default function OwnerNotificationsPage() {
     <section className="owner-notification-list">
       <div className="owner-notification-list-heading"><h2>Thông báo của bạn</h2><span>{notifications.filter((item) => !item.is_read).length} chưa đọc</span></div>
       {notifications.length === 0 ? <p className="owner-notification-empty">Chưa có thông báo kiểm duyệt nào.</p> : notifications.map((item) => <article key={item.id} className={`owner-notification ${item.is_read ? "read" : "unread"}`}>
-        <div><span className="owner-notification-type">{item.notification_type === "POI_REVIEW" ? "ĐỊA ĐIỂM" : "BẢN DỊCH"}</span><p>{item.message}</p><time>{new Date(item.created_at).toLocaleString("vi-VN")}</time></div>
+        <div><span className="owner-notification-type">{item.notification_type === "POI_REVIEW" ? "ĐỊA ĐIỂM" : "BẢN DỊCH"}</span><p>{item.message}</p><time>{formatServerDateTime(item.created_at)}</time></div>
         {!item.is_read && <button type="button" onClick={() => markRead(item)}>Đánh dấu đã đọc</button>}
       </article>)}
     </section>

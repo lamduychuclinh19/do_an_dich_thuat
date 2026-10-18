@@ -105,7 +105,7 @@ function LoginPage() {
           </p>
 
           <h1>
-            Thuyết minh địa điểm
+            THUYẾT MINH ĐỊA ĐIỂM
           </h1>
         </div>
 

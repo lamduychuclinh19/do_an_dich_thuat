@@ -1,9 +1,11 @@
+import asyncio
 import logging
 from pathlib import Path
 from uuid import uuid4
 
 import edge_tts
 from aiohttp import WSServerHandshakeError
+from edge_tts.exceptions import NoAudioReceived
 from fastapi import HTTPException, UploadFile, status
 
 
@@ -25,6 +27,8 @@ MAX_TEXT_FILE_SIZE = 1024 * 1024
 # Giới hạn độ dài một bài thuyết minh.
 # 20.000 ký tự đã đủ cho nội dung khá dài.
 MAX_NARRATION_CHARACTERS = 20_000
+MAX_TTS_ATTEMPTS = 3
+TTS_CHUNK_CHARACTERS = 250
 
 
 # Mỗi ngôn ngữ sử dụng một giọng đọc tương ứng.
@@ -36,8 +40,71 @@ VOICE_BY_LANGUAGE = {
     "ko": "ko-KR-SunHiNeural",
 }
 
+# Nếu một voice tạm thời không trả audio, thử voice cùng ngôn ngữ trước khi
+# kết luận yêu cầu thất bại. Đây đều là voice Neural có sẵn của Edge TTS.
+FALLBACK_VOICES_BY_LANGUAGE = {
+    "vi": ("vi-VN-NamMinhNeural",),
+    "en": ("en-US-GuyNeural",),
+    "fr": ("fr-FR-HenriNeural",),
+    "zh": ("zh-CN-YunxiNeural",),
+    "ko": ("ko-KR-InJoonNeural",),
+}
+
 
 class AudioService:
+    @staticmethod
+    def _split_text(text: str, max_characters: int) -> list[str]:
+        """Chia văn bản ở ranh giới câu/từ để dịch vụ TTS xử lý ổn định hơn."""
+        chunks: list[str] = []
+        remaining = text.strip()
+
+        while len(remaining) > max_characters:
+            boundary = max_characters
+            # Ưu tiên ngắt sau dấu câu trong nửa sau của đoạn.
+            punctuation_boundary = max(
+                remaining.rfind(mark, max_characters // 2, max_characters)
+                for mark in ".!?。！？;；\n"
+            )
+            if punctuation_boundary >= max_characters // 2:
+                boundary = punctuation_boundary + 1
+            else:
+                whitespace_boundary = remaining.rfind(
+                    " ", max_characters // 2, max_characters
+                )
+                if whitespace_boundary > 0:
+                    boundary = whitespace_boundary
+
+            chunk = remaining[:boundary].strip()
+            if not chunk:
+                boundary = max_characters
+                chunk = remaining[:boundary].strip()
+            chunks.append(chunk)
+            remaining = remaining[boundary:].strip()
+
+        if remaining:
+            chunks.append(remaining)
+        return chunks
+
+    @staticmethod
+    async def _save_tts_attempt(
+        text: str,
+        voice: str,
+        destination: Path,
+    ) -> None:
+        communicate = edge_tts.Communicate(
+            text=text,
+            voice=voice,
+            rate="+0%",
+            volume="+0%",
+            pitch="+0Hz",
+        )
+        await asyncio.wait_for(
+            communicate.save(str(destination)),
+            timeout=90,
+        )
+        if not destination.exists() or destination.stat().st_size == 0:
+            raise NoAudioReceived("Edge-TTS returned an empty audio file")
+
     def _validate_text(
         self,
         text: str,
@@ -141,6 +208,20 @@ class AudioService:
         """
 
         cleaned_text = self._validate_text(text)
+        edge_tts_version = tuple(
+            int(part)
+            for part in edge_tts.__version__.split(".")[:3]
+        )
+        if edge_tts_version < (7, 3, 1):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=(
+                    f"Backend đang nạp edge-tts {edge_tts.__version__}, "
+                    "chưa có bản sửa handshake. Hãy tắt hẳn backend rồi "
+                    "khởi động lại bằng .venv sau khi cài requirements.txt."
+                ),
+            )
+
         normalized_language = (
             language_code.strip().lower()
         )
@@ -169,22 +250,83 @@ class AudioService:
 
         # Edge-TTS ghi vào file tạm trước.
         # Chỉ khi hoàn thành mới đổi thành file MP3 chính thức.
-        temporary_path = (
-            AUDIO_DIRECTORY / f"{file_id}.tmp"
-        )
-
-        communicate = edge_tts.Communicate(
-            text=cleaned_text,
-            voice=voice,
-            rate="+0%",
-            volume="+0%",
-            pitch="+0Hz",
-        )
+        temporary_path = AUDIO_DIRECTORY / f"{file_id}.tmp"
+        chunk_path = AUDIO_DIRECTORY / f"{file_id}.chunk.tmp"
 
         try:
-            await communicate.save(
-                str(temporary_path)
-            )
+            # Thử toàn văn trước để giữ tốc độ bình thường. Một vài lần
+            # Edge trả WebSocket thành công nhưng không gửi frame audio.
+            full_text_error: Exception | None = None
+            for attempt in range(1, MAX_TTS_ATTEMPTS + 1):
+                try:
+                    await self._save_tts_attempt(
+                        cleaned_text, voice, temporary_path
+                    )
+                    full_text_error = None
+                    break
+                except Exception as error:
+                    full_text_error = error
+                    for path in (temporary_path, chunk_path):
+                        if path.exists():
+                            path.unlink()
+                    if attempt == MAX_TTS_ATTEMPTS:
+                        break
+                    logger.warning(
+                        "Edge-TTS attempt failed (%s); retry %s/%s",
+                        type(error).__name__,
+                        attempt,
+                        MAX_TTS_ATTEMPTS - 1,
+                    )
+                    await asyncio.sleep(0.5 * attempt)
+
+            # Nếu văn bản dài bị từ chối/không có audio, chia thành các đoạn
+            # ngắn và ghép luồng MP3. Mỗi đoạn có retry và voice dự phòng riêng.
+            if full_text_error is not None:
+                chunks = self._split_text(
+                    cleaned_text,
+                    TTS_CHUNK_CHARACTERS,
+                )
+                voices = (
+                    voice,
+                    *FALLBACK_VOICES_BY_LANGUAGE.get(
+                        normalized_language,
+                        (),
+                    ),
+                )
+                with temporary_path.open("wb") as combined_audio:
+                    for chunk_index, chunk in enumerate(chunks, start=1):
+                        chunk_error: Exception | None = None
+                        chunk_created = False
+                        for chunk_voice in voices:
+                            for attempt in range(1, 3):
+                                try:
+                                    await self._save_tts_attempt(
+                                        chunk,
+                                        chunk_voice,
+                                        chunk_path,
+                                    )
+                                    with chunk_path.open("rb") as audio_part:
+                                        combined_audio.write(audio_part.read())
+                                    chunk_created = True
+                                    chunk_error = None
+                                    break
+                                except Exception as error:
+                                    chunk_error = error
+                                    if chunk_path.exists():
+                                        chunk_path.unlink()
+                                    if attempt < 2:
+                                        await asyncio.sleep(0.5 * attempt)
+                            if chunk_created:
+                                break
+                        if not chunk_created:
+                            raise chunk_error or full_text_error
+                        logger.info(
+                            "Edge-TTS synthesized chunk %s/%s",
+                            chunk_index,
+                            len(chunks),
+                        )
+                if chunk_path.exists():
+                    chunk_path.unlink()
 
             # File phải tồn tại và có dữ liệu.
             if (
@@ -207,15 +349,18 @@ class AudioService:
             # Nếu mạng hoặc Edge-TTS lỗi, dọn file tạm.
             if temporary_path.exists():
                 temporary_path.unlink()
+            if chunk_path.exists():
+                chunk_path.unlink()
 
             if final_path.exists():
                 final_path.unlink()
 
             if isinstance(error, WSServerHandshakeError) and error.status == 403:
                 detail = (
-                    "Dịch vụ Edge-TTS từ chối kết nối (HTTP 403). "
-                    "Nội dung chưa được lưu vì chưa tạo đủ audio. "
-                    "Hãy thử lại sau hoặc thử một tuyến mạng khác."
+                    "Dịch vụ Edge-TTS vẫn từ chối kết nối (HTTP 403) sau "
+                    "3 lần thử. Nội dung chưa được lưu vì thiếu audio. "
+                    "Hãy xác nhận backend đang dùng edge-tts 7.3.1 trong "
+                    "đúng môi trường .venv rồi khởi động lại backend."
                 )
             else:
                 detail = (

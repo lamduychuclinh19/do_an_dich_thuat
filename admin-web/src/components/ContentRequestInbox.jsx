@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import api from "../services/api";
 import ContentRequestComparison from "./ContentRequestComparison";
+import { formatServerDateTime } from "../utils/dateTime";
 import "./ContentRequestInbox.css";
 
-const dateText = (value) => value ? new Date(value).toLocaleString("vi-VN") : "—";
+const dateText = (value) => formatServerDateTime(value);
 const statuses = [
   ["all", "Tất cả"],
   ["PENDING", "Chờ duyệt"],
@@ -102,7 +103,7 @@ export default function ContentRequestInbox({ type }) {
 
   return <section className="content-request-panel">
     <header className="content-request-header">
-      <div><h2>{type === "POI" ? "Yêu cầu địa điểm từ chủ quán" : "Yêu cầu bản dịch từ chủ quán"}</h2><p>{pending} yêu cầu đang chờ quản trị viên xử lý</p></div>
+      <div><h2>{type === "POI" ? "Yêu cầu địa điểm từ Chủ địa điểm" : "Yêu cầu bản dịch từ Chủ địa điểm"}</h2><p>{pending} yêu cầu đang chờ quản trị viên xử lý</p></div>
       <button className="content-request-refresh" type="button" onClick={load} disabled={isLoading}>
         {isLoading ? "Đang tải..." : "Làm mới"}
       </button>
@@ -124,14 +125,14 @@ export default function ContentRequestInbox({ type }) {
           type="search"
           value={searchText}
           onChange={(event) => setSearchText(event.target.value)}
-          placeholder={type === "POI" ? "Tìm mã yêu cầu, chủ quán hoặc địa điểm..." : "Tìm mã yêu cầu, chủ quán, tiêu đề hoặc mã địa điểm..."}
-          aria-label="Tìm yêu cầu từ chủ quán"
+          placeholder={type === "POI" ? "Tìm mã yêu cầu, Chủ địa điểm hoặc địa điểm..." : "Tìm mã yêu cầu, Chủ địa điểm, tiêu đề hoặc mã địa điểm..."}
+          aria-label="Tìm yêu cầu từ Chủ địa điểm"
         />
       </label>
     </div>
     <div className="content-request-result-count">Hiển thị {filteredItems.length} trên tổng số {items.length} yêu cầu</div>
     <div className="content-request-table-wrap"><table className="content-request-table">
-      <thead><tr><th>Chủ quán</th><th>Nội dung</th><th>Hành động</th><th>Ngày gửi</th><th>Trạng thái</th><th>Chi tiết</th></tr></thead>
+      <thead><tr><th>Chủ địa điểm</th><th>Nội dung</th><th>Hành động</th><th>Ngày gửi</th><th>Trạng thái</th><th>Chi tiết</th></tr></thead>
       <tbody>{filteredItems.length ? filteredItems.map((item) => <tr key={item.id}>
 
         <td><strong>{item.submitter_name || item.submitted_by_username}</strong><small>{item.submitted_by_username}</small></td>
@@ -152,7 +153,7 @@ export default function ContentRequestInbox({ type }) {
           previousDetails={selected.previous_details}
         />
         {selected.status === "PENDING" ? <>
-          <label htmlFor="content-request-note">Ghi chú gửi chủ quán</label>
+          <label htmlFor="content-request-note">Ghi chú gửi Chủ địa điểm</label>
           <textarea id="content-request-note" rows="4" maxLength={2000} value={note} onChange={(event) => { setNote(event.target.value); setError(""); }} />
           {error && <p className="content-request-error" role="alert">{error}</p>}
           <footer><button type="button" disabled={busy} className="reject" onClick={() => decide(false)}>Từ chối</button><button type="button" disabled={busy} className="approve" onClick={() => decide(true)}>{busy ? "Đang xử lý..." : "Đồng ý"}</button></footer>

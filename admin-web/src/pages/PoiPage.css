@@ -56,6 +56,27 @@
   box-shadow: 0 8px 25px rgba(20, 55, 49, 0.05);
 }
 
+.poi-list-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #e7ecea;
+}
+
+.poi-list-heading h2 {
+  margin: 0 0 5px;
+  color: #173c36;
+  font-size: 17px;
+}
+
+.poi-list-heading p {
+  margin: 0;
+  color: #82908c;
+  font-size: 13px;
+}
+
 .poi-toolbar {
   display: flex;
   justify-content: space-between;
@@ -350,6 +371,10 @@
 }
 
 @media (max-width: 700px) {
+  .poi-list-heading {
+    align-items: flex-start;
+  }
+
   .poi-heading-actions {
     width: 100%;
     justify-content: space-between;

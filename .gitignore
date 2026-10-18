@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 .env
+translations-512002-9107abf49537.json
 .vscode/
 ~$*
 .fake

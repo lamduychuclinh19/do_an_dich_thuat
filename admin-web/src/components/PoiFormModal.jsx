@@ -35,7 +35,7 @@ function getInitialForm(editingPoi) {
 const fieldLabels = {
   id: "Mã địa điểm",
   poi_code: "Mã địa điểm",
-  owner_id: "Chủ quán sở hữu địa điểm",
+  owner_id: "Chủ địa điểm",
   name: "Tên địa điểm",
   description: "Mô tả",
   address: "Địa chỉ",
@@ -64,7 +64,7 @@ function validateForm(formData, isSystemAdmin, editingPoi) {
 
     if (isSystemAdmin && !formData.owner_id) {
       errors.owner_id =
-        "Vui lòng chọn đúng một chủ quán trong danh sách gợi ý.";
+        "Vui lòng chọn đúng một Chủ địa điểm trong danh sách gợi ý.";
     }
   }
 
@@ -278,7 +278,7 @@ function PoiFormModal({
       .trim()
       .toLocaleLowerCase("vi");
 
-    // Khi quản trị viên chọn một gợi ý, lưu ID thật của chủ quán.
+    // Khi quản trị viên chọn một gợi ý, lưu ID thật của Chủ địa điểm.
     // Nếu họ mới chỉ nhập một phần nội dung thì chưa gửi owner_id.
     const selectedOwner = shopOwners.find((owner) => {
       const ownerId = String(owner.id).toLocaleLowerCase("vi");
@@ -385,7 +385,7 @@ function PoiFormModal({
       payload.id = formData.id.trim().toUpperCase();
     }
 
-    // Khi SYSTEM_ADMIN tạo POI, backend cần biết POI thuộc chủ quán nào.
+    // Khi SYSTEM_ADMIN tạo POI, backend cần biết POI thuộc Chủ địa điểm nào.
     // SHOP_OWNER không gửi owner_id vì backend tự lấy từ JWT.
     if (!editingPoi && isSystemAdmin) {
       payload.owner_id = Number(formData.owner_id);
@@ -444,7 +444,7 @@ function PoiFormModal({
           serverField = "id";
         } else if (
           normalizedDetail.includes("owner") ||
-          normalizedDetail.includes("chủ quán")
+          normalizedDetail.includes("Chủ địa điểm")
         ) {
           serverField = "owner_id";
         }
@@ -569,7 +569,7 @@ function PoiFormModal({
           {!editingPoi && isSystemAdmin && (
             <>
               <label htmlFor="poi-owner">
-                Chủ quán sở hữu địa điểm
+                Chủ địa điểm
               </label>
 
               <input
@@ -578,7 +578,7 @@ function PoiFormModal({
                 list="shop-owner-options"
                 value={ownerSearch}
                 onChange={handleOwnerSearchChange}
-                placeholder="Gõ tên, Số điện thoại hoặc mã chủ quán"
+                placeholder="Gõ tên, Số điện thoại hoặc mã Chủ địa điểm"
                 autoComplete="off"
                 aria-invalid={Boolean(fieldErrors.owner_id)}
                 aria-describedby={
@@ -600,7 +600,7 @@ function PoiFormModal({
 
               {ownerSearch && !formData.owner_id && (
                 <p className="owner-select-note">
-                  Hãy chọn đúng một chủ quán trong danh sách gợi ý.
+                  Hãy chọn đúng một Chủ địa điểm trong danh sách gợi ý.
                 </p>
               )}
 
@@ -609,7 +609,7 @@ function PoiFormModal({
               {shopOwners.length === 0 && (
                 <p className="owner-select-note">
                   Chưa có tài khoản SHOP_OWNER đang hoạt động. Hãy tạo hoặc
-                  mở khóa chủ quán trước khi thêm địa điểm.
+                  mở khóa Chủ địa điểm trước khi thêm địa điểm.
                 </p>
               )}
             </>

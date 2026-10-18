@@ -169,7 +169,7 @@ class AdminRepository:
         is_active: bool | None = None,
     ) -> list[dict]:
         """
-        Lấy danh sách tài khoản chủ quán.
+        Lấy danh sách tài khoản Chủ địa điểm.
 
         Màn hình quản lý tài khoản chỉ quản lý SHOP_OWNER,
         vì vậy SYSTEM_ADMIN không bao giờ xuất hiện trong kết quả.
@@ -244,7 +244,7 @@ class AdminRepository:
         created_by_system_admin_id: int,
     ) -> dict:
         """
-        Tạo tài khoản chủ quán mới.
+        Tạo tài khoản Chủ địa điểm mới.
 
         Role luôn do backend đặt là SHOP_OWNER, không lấy role
         từ frontend để tránh người dùng tự nâng quyền.
@@ -312,7 +312,7 @@ class AdminRepository:
         data: dict,
     ) -> dict | None:
         """
-        Sửa thông tin chủ quán.
+        Sửa thông tin Chủ địa điểm.
 
         is_active nằm trong data của chức năng sửa,
         không có repository bật/tắt trạng thái riêng.
@@ -381,7 +381,7 @@ class AdminRepository:
         password_hash: str,
     ) -> bool:
         """
-        Đặt lại mật khẩu chủ quán về mật khẩu mặc định.
+        Đặt lại mật khẩu Chủ địa điểm về mật khẩu mặc định.
 
         Chỉ cập nhật SHOP_OWNER, không cho API quản lý tài khoản
         đặt lại mật khẩu của SYSTEM_ADMIN.
@@ -439,7 +439,7 @@ class AdminRepository:
         """
         Giữ lại hàm cũ để không làm hỏng code đã sử dụng nó.
 
-        Tài khoản chủ quán đầy đủ phải được tạo bằng
+        Tài khoản Chủ địa điểm đầy đủ phải được tạo bằng
         create_shop_owner(), không dùng hàm này cho code mới.
         """
         query = text(

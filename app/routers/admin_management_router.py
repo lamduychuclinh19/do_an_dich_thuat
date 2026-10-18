@@ -1,4 +1,4 @@
-"""API quản lý tài khoản chủ địa điểm dành riêng cho SYSTEM_ADMIN."""
+"""API quản lý tài khoản Chủ địa điểm dành riêng cho SYSTEM_ADMIN."""
 
 from fastapi import APIRouter, Depends, status
 

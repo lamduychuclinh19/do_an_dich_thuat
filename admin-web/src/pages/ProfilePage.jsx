@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import { validateVietnamPhone } from "../utils/vietnamPhone";
 import {
   clearSession,
   getRoleLabel,
@@ -43,6 +44,7 @@ function ProfilePage() {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [profileError, setProfileError] = useState("");
   const [profileSuccess, setProfileSuccess] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   const [passwordError, setPasswordError] = useState("");
 
   useEffect(() => {
@@ -76,6 +78,7 @@ function ProfilePage() {
       ...currentData,
       [name]: value,
     }));
+    if (name === "phone") setPhoneError(validateVietnamPhone(value));
   };
 
   const handlePasswordChange = (event) => {
@@ -88,6 +91,12 @@ function ProfilePage() {
 
   const saveProfile = async (event) => {
     event.preventDefault();
+    const validationError = validateVietnamPhone(
+      profileForm.phone,
+      { requireComplete: true },
+    );
+    setPhoneError(validationError);
+    if (validationError) return;
 
     try {
       setIsSavingProfile(true);
@@ -194,8 +203,12 @@ function ProfilePage() {
                 value={profileForm.phone}
                 onChange={handleProfileChange}
                 pattern="0[0-9]{9}"
+                inputMode="numeric"
                 required
+                aria-invalid={Boolean(phoneError)}
+                aria-describedby={phoneError ? "profile-phone-error" : undefined}
               />
+              {phoneError && <small className="profile-field-error" id="profile-phone-error">{phoneError}</small>}
             </div>
 
             <div className="profile-field full-width">

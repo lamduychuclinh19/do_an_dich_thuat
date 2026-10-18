@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import api from "../services/api";
+import { formatServerDateTime, parseServerDate } from "../utils/dateTime";
 import "./OwnerRegistrationPage.css";
 
 const formatDateTime = (value) =>
-  value ? new Date(value).toLocaleString("vi-VN") : "Chưa xử lý";
+  formatServerDateTime(value, "Chưa xử lý");
 
 function getErrorMessage(error, fallback) {
   const detail = error.response?.data?.detail;
@@ -116,7 +117,7 @@ export default function OwnerRegistrationPage() {
       const aPending = !a.reviewed_at;
       const bPending = !b.reviewed_at;
       if (aPending !== bPending) return aPending ? -1 : 1;
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      return parseServerDate(b.created_at).getTime() - parseServerDate(a.created_at).getTime()
         || b.id - a.id;
     });
 
@@ -125,7 +126,7 @@ export default function OwnerRegistrationPage() {
       <header className="registration-heading">
         <div>
           <p>QUẢN LÝ TÀI KHOẢN</p>
-          <h1>Phiếu đăng ký chủ quán</h1>
+          <h1>Phiếu đăng ký Chủ địa điểm</h1>
           <span>Xem xét thông tin và phản hồi yêu cầu tạo tài khoản.</span>
         </div>
       </header>
@@ -177,7 +178,7 @@ export default function OwnerRegistrationPage() {
           <table className="registration-table">
             <thead>
               <tr>
-                <th>Chủ quán</th>
+                <th>Chủ địa điểm</th>
                 <th>Thông tin liên hệ</th>
                 <th>Ngày gửi</th>
                 <th>Trạng thái</th>
@@ -233,7 +234,7 @@ export default function OwnerRegistrationPage() {
               </div>
             ) : (
               <>
-                <label className="registration-note-label" htmlFor="admin-note">Ghi chú gửi chủ quán qua email</label>
+                <label className="registration-note-label" htmlFor="admin-note">Ghi chú gửi Chủ địa điểm qua email</label>
                 <textarea id="admin-note" rows="4" maxLength={2000} value={note} onChange={(event) => setNote(event.target.value)} />
                 <div className="registration-decision-actions">
                   <button className="registration-reject" type="button" disabled={busy} onClick={() => decide(0)}>Từ chối</button>

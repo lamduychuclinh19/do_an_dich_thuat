@@ -112,6 +112,19 @@
   font-size: 11px;
 }
 
+.profile-field input[aria-invalid="true"] {
+  border-color: #c43f3f;
+  background: #fffafa;
+}
+
+.profile-field input[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 3px rgba(196, 63, 63, 0.1);
+}
+
+.profile-field .profile-field-error {
+  color: #b42323;
+}
+
 .profile-primary-button {
   justify-self: start;
   padding: 11px 17px;

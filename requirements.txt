@@ -19,4 +19,4 @@ python-dotenv
 SQLAlchemy
 pyodbc
 python-multipart
-edge-tts==7.3.0
+edge-tts==7.3.1

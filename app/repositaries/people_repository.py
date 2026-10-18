@@ -2,7 +2,7 @@
 
 Một bảng ``people`` dùng chung cho ba nhóm tài khoản:
 - SYSTEM_ADMIN: quản trị toàn hệ thống.
-- SHOP_OWNER: chủ địa điểm, quản lý nội dung thuyết minh.
+- SHOP_OWNER: Chủ địa điểm, quản lý nội dung thuyết minh.
 - TOURIST: khách du lịch sử dụng nội dung sau khi thanh toán.
 """
 
@@ -359,7 +359,7 @@ class PeopleRepository:
         person_id: int,
         password_hash: str,
     ) -> bool:
-        """Đặt lại mật khẩu và buộc chủ địa điểm đổi ở lần đăng nhập sau."""
+        """Đặt lại mật khẩu và buộc Chủ địa điểm đổi ở lần đăng nhập sau."""
         query = text(
             """
             UPDATE dbo.people

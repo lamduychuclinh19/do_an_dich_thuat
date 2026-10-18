@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import api from "../services/api";
 import ContentRequestComparison from "../components/ContentRequestComparison";
+import { formatServerDateTime } from "../utils/dateTime";
 import "./OwnerRequestsPage.css";
 
 const statusOptions = [
@@ -17,9 +18,7 @@ const statusLabels = {
   REJECTED: "Đã từ chối",
 };
 
-const formatDateTime = (value) => value
-  ? new Date(value).toLocaleString("vi-VN")
-  : "Chưa xử lý";
+const formatDateTime = (value) => formatServerDateTime(value, "Chưa xử lý");
 
 function normalizeSearch(value) {
   return String(value ?? "")
@@ -93,7 +92,7 @@ export default function OwnerRequestsPage() {
     <main className="owner-requests-page">
       <header className="owner-requests-heading">
         <div>
-          <p>QUẢN LÝ TÀI KHOẢN</p>
+          <p>QUẢN LÝ NỘI DUNG</p>
           <h1>Yêu cầu đã gửi</h1>
           <span>Theo dõi nội dung đã gửi và xem ghi chú kiểm duyệt của quản trị viên.</span>
         </div>

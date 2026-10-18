@@ -33,7 +33,7 @@ class AdminManagementService:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=(
                     "Chỉ quản trị hệ thống mới được quản lý "
-                    "tài khoản chủ địa điểm"
+                    "tài khoản Chủ địa điểm"
                 ),
             )
 
@@ -52,7 +52,7 @@ class AdminManagementService:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=(
                     "Chức năng này chỉ được tác động đến "
-                    "tài khoản chủ địa điểm"
+                    "tài khoản Chủ địa điểm"
                 ),
             )
 
@@ -261,7 +261,7 @@ class AdminManagementService:
         if updated is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Không tìm thấy chủ địa điểm",
+                detail="Không tìm thấy Chủ địa điểm",
             )
 
         return updated
@@ -287,7 +287,7 @@ class AdminManagementService:
         if not was_updated:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Không tìm thấy chủ địa điểm",
+                detail="Không tìm thấy Chủ địa điểm",
             )
 
         return ResetPasswordResponse(

@@ -5,8 +5,8 @@ from pydantic import BaseModel, Field
 
 
 # Hệ thống mới có đúng hai nhóm tài khoản:
-# SYSTEM_ADMIN: quản trị hệ thống và quản lý tài khoản chủ quán.
-# SHOP_OWNER: chủ quán, quản lý POI và nội dung thuyết minh của mình.
+# SYSTEM_ADMIN: quản trị hệ thống và quản lý tài khoản Chủ địa điểm.
+# SHOP_OWNER: Chủ địa điểm, quản lý POI và nội dung thuyết minh của mình.
 AdminRole = Literal[
     "SYSTEM_ADMIN",
     "SHOP_OWNER",
@@ -16,7 +16,7 @@ AdminRole = Literal[
 class ShopOwnerCreate(BaseModel):
     """
     Dữ liệu quản trị hệ thống nhập khi cấp tài khoản
-    mới cho một chủ quán.
+    mới cho một Chủ địa điểm.
 
     Giao diện không gửi password vì backend luôn đặt
     mật khẩu ban đầu là abc12345 rồi băm trước khi lưu.
@@ -59,7 +59,7 @@ class ShopOwnerCreate(BaseModel):
 class ShopOwnerUpdate(BaseModel):
     """
     Thông tin quản trị hệ thống được phép chỉnh sửa
-    đối với tài khoản chủ quán.
+    đối với tài khoản Chủ địa điểm.
 
     Trạng thái hoạt động nằm ngay trong form sửa thông
     tin. Hệ thống không tạo nút hoặc API bật/tắt riêng.

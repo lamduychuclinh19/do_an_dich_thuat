@@ -10,6 +10,20 @@ class OwnerRegistrationCreate(BaseModel):
     phone: str = Field(pattern=r"^0[0-9]{9}$")
     email: str = Field(min_length=6, max_length=255)
 
+    @field_validator("phone")
+    @classmethod
+    def validate_vietnam_mobile_prefix(cls, value: str) -> str:
+        valid_prefixes = {
+            "032", "033", "034", "035", "036", "037", "038", "039",
+            "052", "055", "056", "058", "059",
+            "070", "076", "077", "078", "079",
+            "081", "082", "083", "084", "085", "086", "088", "089",
+            "090", "091", "092", "093", "094", "096", "097", "098", "099",
+        }
+        if value[:3] not in valid_prefixes:
+            raise ValueError("Đầu số này không thuộc các đầu số di động Việt Nam")
+        return value
+
     @field_validator("password")
     @classmethod
     def validate_password(cls, value: str) -> str:

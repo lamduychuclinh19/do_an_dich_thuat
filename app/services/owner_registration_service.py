@@ -111,12 +111,12 @@ class OwnerRegistrationService:
             )
         message = EmailMessage()
         result = "được chấp nhận" if item["status"] == 1 else "bị từ chối"
-        message["Subject"] = "Kết quả phiếu đăng ký chủ quán"
+        message["Subject"] = "Kết quả phiếu đăng ký Chủ địa điểm"
         message["From"] = sender
         message["To"] = item["email"]
         message.set_content(
             f"Xin chào {item['full_name']},\n\n"
-            f"Phiếu đăng ký tài khoản chủ quán của bạn {result}.\n"
+            f"Phiếu đăng ký tài khoản Chủ địa điểm của bạn {result}.\n"
             f"Ghi chú từ quản trị viên: {item['admin_note']}\n"
         )
         try:
