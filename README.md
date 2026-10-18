@@ -1,6 +1,5 @@
 # Museum Guide V2 — Hệ thống thuyết minh địa điểm đa ngôn ngữ
 Ứng dụng hỗ trợ khách tham quan tìm địa điểm, chọn ngôn ngữ và nghe nội dung thuyết minh. Quản trị viên quản lý tài khoản chủ địa điểm, địa điểm và bản dịch; chủ quán quản lý địa điểm, nội dung thuyết minh và hồ sơ của mình.
-> Repo hiện có **backend FastAPI** và **giao diện web quản lý React**.
 
 ## Mục lục
 
@@ -50,19 +49,19 @@ Museum Guide V2 là hệ thống quản lý và cung cấp thuyết minh cho cá
 
 1. Chủ quán gửi phiếu đăng ký.
 2. Phiếu ở trạng thái chờ; tài khoản chủ quán chỉ được tạo sau khi quản trị viên đồng ý.
-3. Quản trị viên đồng ý hoặc từ chối và lưu ghi chú xử lý. Nếu bật gửi email, hệ thống gửi kết quả qua SMTP.
+3. Quản trị viên đồng ý hoặc từ chối và lưu ghi chú xử lý. Và thông báo sẽ được gửi email cho chủ địa điểm.
 4. Người dùng đăng nhập bằng tài khoản phù hợp. Backend xác thực token và kiểm tra vai trò ở mỗi API; frontend chỉ phụ trách giao diện và điều hướng.
 
 ### 2.2. Địa điểm
 
 1. Quản trị viên có thể quản lý địa điểm toàn hệ thống.
 2. Chủ quán gửi yêu cầu tạo hoặc cập nhật địa điểm, bao gồm thông tin và tọa độ trên bản đồ.
-3. Quản trị viên xem nội dung yêu cầu, so sánh thông tin cũ/mới rồi duyệt hoặc từ chối.
+3. Quản trị viên xem nội dung yêu cầu, xem các thông tin cũ/mới rồi duyệt hoặc từ chối.
 4. Địa điểm đang hoạt động được cung cấp cho API công khai.
 
 ### 2.3. Bản dịch và audio
 
-1. Người có quyền quản lý nội dung nhập tiêu đề và thuyết minh tiếng Việt (hoặc tải file TXT).
+1. Người chủ địa điểm có quyền quản lý nội dung nhập tiêu đề và thuyết minh tiếng Việt (hoặc tải file TXT).
 2. Backend dùng Ollama để tạo bản dịch tiếng Anh, Pháp, Trung và Hàn.
 3. Backend gọi Edge TTS để tạo audio cho các ngôn ngữ. Sau khi xử lý thành công, bản dịch và đường dẫn audio được lưu vào SQL Server; audio được phục vụ dưới `/audio/...`.
 4. Bản dịch có thể được quản lý theo địa điểm và bật/tắt hiển thị theo quyền.
@@ -73,7 +72,7 @@ Museum Guide V2 là hệ thống quản lý và cung cấp thuyết minh cho cá
 
 1. Ứng dụng khách xin quyền truy cập GPS và lấy danh sách hướng dẫn bằng API công khai.
 2. Ứng dụng theo dõi tọa độ của khách, khoảng cách tới địa điểm và bán kính kích hoạt `trigger_radius_meters`.
-3. Quy tắc khách ở trong vùng liên tục 10 giây rồi tự phát audio cần được thực hiện ở frontend/app khách. Backend hiện cung cấp dữ liệu địa điểm, bán kính, nội dung và URL audio; repo chưa chứa frontend khách.
+3. Quy tắc khách ở trong vùng liên tục 10 giây rồi tự phát audio cần được thực hiện ở frontend/app khách. Backend hiện cung cấp dữ liệu địa điểm, bán kính, nội dung và URL audio.
 
 ## 3. Cài đặt môi trường cho phần quản lý
 
@@ -90,21 +89,17 @@ Hướng dẫn dưới đây dành cho **Windows 10/11**, bắt đầu từ máy
 7. **Ollama:** cài từ [ollama.com](https://ollama.com/download/windows). Ollama cần thiết cho chức năng tạo bản dịch tự động.
 
 ### 3.2. Tải mã nguồn
-
 Mở PowerShell tại thư mục muốn lưu dự án:
-
 ```powershell
 git clone https://github.com/lamduychuclinh19/do_an_dich_thuat.git
 cd do_an_dich_thuat
 ```
 
 Nếu nhóm đang yêu cầu làm việc trên một nhánh cụ thể, chuyển sang nhánh đó trước khi cài:
-
 ```powershell
 git branch --all
 git switch <ten-nhanh>
 ```
-
 Thay `<ten-nhanh>` bằng tên nhánh mà nhóm thống nhất sử dụng.
 
 ### 3.3. Tạo database
@@ -117,25 +112,21 @@ Thay `<ten-nhanh>` bằng tên nhánh mà nhóm thống nhất sử dụng.
 ### 3.4. Cài cấu hình backend
 
 Trong PowerShell ở thư mục gốc dự án, tạo và kích hoạt môi trường Python:
-
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
-
 Nếu PowerShell chặn kích hoạt script, có thể bỏ qua bước Activate và gọi Python bằng đường dẫn đầy đủ trong các lệnh bên dưới (`.\.venv\Scripts\python.exe`).
 
 Tạo file cấu hình local từ mẫu:
-
 ```powershell
 Copy-Item .env.example .env
 notepad .env
 ```
 
 Thêm cấu hình SQL Server và JWT vào `.env` (giữ các dòng SMTP/Ollama đã có):
-
 ```env
 DB_SERVER=localhost\SQLEXPRESS
 DB_NAME=MuseumGuideDB_V2
@@ -177,11 +168,9 @@ Nhập tên đăng nhập, họ tên, số điện thoại, email và mật kh�
 Mở **hai cửa sổ PowerShell** tại thư mục repo (thư mục có `app/` và `admin-web/`).
 
 **Cửa sổ 1 — backend:**
-
 ```powershell
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
 ```
-
 **Cửa sổ 2 — giao diện quản lý:**
 
 ```powershell
@@ -204,7 +193,6 @@ Mở giao diện tại [http://127.0.0.1:5173](http://127.0.0.1:5173). API docs 
 
 ## 4. Cài đặt môi trường cho user
 
-Trong repo hiện tại, “user” là **khách tham quan**. Chưa có ứng dụng web/mobile dành cho khách để cài hoặc chạy. Khách app do nhóm frontend phát triển có thể kết nối tới các API công khai sau khi backend và SQL Server đã chạy theo mục 3.
 
 ### 4.1. Thử API khách trên máy local
 
@@ -235,7 +223,9 @@ Các mã ngôn ngữ được hỗ trợ: `vi`, `en`, `fr`, `zh`, `ko`. API `nea
 ---
 
 ## Bảo mật khi đưa repo lên GitHub
-
 - Không commit `.env`, mật khẩu, JWT secret, Gmail App Password, token hoặc dữ liệu cá nhân thật.
 - Dùng dữ liệu mẫu/đã ẩn danh khi chụp ảnh hoặc ghi hướng dẫn demo.
 - File audio trong `uploads/audio/` được tạo khi chạy local và không nằm trong mã nguồn tải lên Git.
+
+## Tác giả
+Vòng Viễn Phi, Lâm Duy Chúc Linh, Nguyễn Gia Bảo
