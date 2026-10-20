@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import api from "../services/api";
 import "./PoiPage.css";
 import PoiFormModal from "../components/PoiFormModal";
+import PoiDetailsModal from "../components/PoiDetailsModal";
 import { getSession } from "../services/auth";
 
 function normalizeOwnerSearchValue(value) {
@@ -74,6 +75,7 @@ function PoiPage() {
     const isSystemAdmin = session?.role === "SYSTEM_ADMIN";
     const [pois, setPois] = useState([]);
     const [shopOwners, setShopOwners] = useState([]);
+    const [isLoadingShopOwners, setIsLoadingShopOwners] = useState(isSystemAdmin);
     const [searchText, setSearchText] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [ownerSearch, setOwnerSearch] = useState("");
@@ -114,6 +116,8 @@ function PoiPage() {
                 setErrorMessage(
                     "Không thể tải danh sách Chủ địa điểm để gán địa điểm."
                 );
+            } finally {
+                setIsLoadingShopOwners(false);
             }
         };
 
@@ -234,6 +238,7 @@ function PoiPage() {
     };
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingPoi, setEditingPoi] = useState(null);
+    const [detailsPoi, setDetailsPoi] = useState(null);
     const handleOpenCreate = () => {
         setEditingPoi(null);
         setIsFormOpen(true);
@@ -365,7 +370,7 @@ function PoiPage() {
                         {isSystemAdmin && (
                             <div className="owner-id-filter">
                                 <input
-                                    type="search"
+                                    type="text"
                                     list="poi-owner-filter-options"
                                     value={ownerSearch}
                                     onChange={handleOwnerSearchChange}
@@ -459,7 +464,13 @@ function PoiPage() {
 
                                         <td>
                                             <div className="poi-information">
-                                                <strong>{poi.name}</strong>
+                                                <button
+                                                    type="button"
+                                                    className="poi-name-button"
+                                                    onClick={() => setDetailsPoi(poi)}
+                                                >
+                                                    {poi.name}
+                                                </button>
                                                 <span>
                                                     {poi.description ||
                                                         "Chưa có mô tả"}
@@ -552,6 +563,17 @@ function PoiPage() {
                     shopOwners={activeShopOwners}
                     onClose={handleCloseForm}
                     onSaved={handlePoiSaved}
+                />
+            )}
+            {detailsPoi && (
+                <PoiDetailsModal
+                    poi={detailsPoi}
+                    owner={shopOwners.find(
+                        (owner) => String(owner.id) === String(detailsPoi.owner_id)
+                    )}
+                    isLoadingOwner={isLoadingShopOwners}
+                    isSystemAdmin={isSystemAdmin}
+                    onClose={() => setDetailsPoi(null)}
                 />
             )}
         </div>

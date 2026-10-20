@@ -14,24 +14,49 @@ const initialForm = {
 };
 
 function validateField(name, value, form) {
-  if (name === "username" && value) {
+  const normalizedValue = String(value ?? "").trim();
+  if (!normalizedValue) return "";
+
+  if (name === "username") {
     if (/\s/.test(value)) return "Tên đăng nhập không được chứa dấu cách.";
     if (!/^[A-Za-z0-9_.-]{4,50}$/.test(value)) {
       return "Tên đăng nhập cần từ 4–50 ký tự, chỉ gồm chữ, số, dấu chấm, gạch dưới hoặc gạch ngang.";
     }
   }
-  if (name === "phone" && value) {
+  if (name === "full_name" && normalizedValue.length < 2) {
+    return "Họ và tên cần có ít nhất 2 ký tự.";
+  }
+  if (name === "phone") {
     return validateVietnamPhone(value);
   }
-  if (name === "password" && value) {
+  if (name === "email") {
+    const [localPart, domain] = normalizedValue.toLowerCase().split("@");
+    if (!localPart || !domain?.includes(".")) return "Email không đúng định dạng.";
+    if (domain !== "gmail.com" || localPart.length < 2) {
+      return "Email đăng ký phải là địa chỉ Gmail hợp lệ.";
+    }
+  }
+  if (name === "password") {
     if (value.length < 8 || !/\p{L}/u.test(value) || !/\p{N}/u.test(value)) {
       return "Mật khẩu cần ít nhất 8 ký tự, gồm cả chữ và số.";
     }
   }
-  if (name === "confirmPassword" && value && value !== form.password) {
+  if (name === "confirmPassword" && value !== form.password) {
     return "Mật khẩu xác nhận chưa khớp.";
   }
   return "";
+}
+
+function validateRequiredFields(form) {
+  const requiredMessage = "Bạn chưa điền thông tin này.";
+  return Object.fromEntries(
+    Object.entries(form).map(([name, value]) => [
+      name,
+      String(value ?? "").trim()
+        ? validateField(name, value, form)
+        : requiredMessage,
+    ])
+  );
 }
 
 function getApiError(error) {
@@ -67,23 +92,31 @@ export default function OwnerSignupPage() {
     setMessage("");
     setError("");
 
-    const nextErrors = {
-      username: validateField("username", form.username, form),
-      phone: validateVietnamPhone(form.phone, { requireComplete: true }),
-      password: validateField("password", form.password, form),
-      confirmPassword: form.password !== form.confirmPassword
-        ? "Mật khẩu xác nhận chưa khớp."
-        : "",
-    };
+    const nextErrors = validateRequiredFields(form);
+    if (form.phone && !nextErrors.phone) {
+      nextErrors.phone = validateVietnamPhone(form.phone, { requireComplete: true });
+    }
     setFieldErrors(nextErrors);
-    if (Object.values(nextErrors).some(Boolean)) return;
+    const firstInvalidField = Object.keys(nextErrors).find((name) => nextErrors[name]);
+    if (firstInvalidField) {
+      const fieldIds = {
+        username: "signup-username",
+        full_name: "signup-full-name",
+        phone: "signup-phone",
+        email: "signup-email",
+        password: "signup-password",
+        confirmPassword: "signup-confirm-password",
+      };
+      window.requestAnimationFrame(() => document.getElementById(fieldIds[firstInvalidField])?.focus());
+      return;
+    }
 
     setBusy(true);
     try {
       const registration = { ...form };
       delete registration.confirmPassword;
       await api.post("/api/auth/shop-owner-registration", registration);
-      setMessage("Phiếu đăng ký đã được gửi. Bạn sẽ nhận kết quả qua email sau khi admin xem xét.");
+      setMessage("Phiếu đăng ký đã được gửi. Bạn sẽ nhận kết quả qua email sau khi quản trị viên xem xét.");
       setForm(initialForm);
       setFieldErrors({});
     } catch (requestError) {
@@ -119,7 +152,8 @@ export default function OwnerSignupPage() {
 
         <label className="signup-field" htmlFor="signup-full-name">
           Họ và tên
-          <input id="signup-full-name" name="full_name" value={form.full_name} onChange={change} autoComplete="name" required />
+          <input id="signup-full-name" name="full_name" value={form.full_name} onChange={change} autoComplete="name" aria-invalid={Boolean(fieldErrors.full_name)} aria-describedby={fieldErrors.full_name ? "signup-full-name-error" : undefined} required />
+          {fieldErrors.full_name && <small className="signup-field-error" id="signup-full-name-error">{fieldErrors.full_name}</small>}
         </label>
 
         <label className="signup-field" htmlFor="signup-phone">
@@ -144,14 +178,13 @@ export default function OwnerSignupPage() {
         <label className="signup-field" htmlFor="signup-email">
           Email
           <small className="signup-field-hint">Thông báo phê duyệt về tài khoản sẽ được gửi về email này</small>
-          <input id="signup-email" name="email" type="email" value={form.email} onChange={change} autoComplete="email" required />
+          <input id="signup-email" name="email" type="email" value={form.email} onChange={change} autoComplete="email" aria-invalid={Boolean(fieldErrors.email)} aria-describedby={fieldErrors.email ? "signup-email-error" : undefined} required />
+          {fieldErrors.email && <small className="signup-field-error" id="signup-email-error">{fieldErrors.email}</small>}
         </label>
 
         <label className="signup-field" htmlFor="signup-password">
           Mật khẩu
-          {fieldErrors.password
-            ? <small className="signup-field-error" id="signup-password-error">{fieldErrors.password}</small>
-            : <small className="signup-field-hint" id="signup-password-hint">Ít nhất 8 ký tự, gồm cả chữ và số.</small>}
+          {!fieldErrors.password && <small className="signup-field-hint" id="signup-password-hint">Ít nhất 8 ký tự, gồm cả chữ và số.</small>}
           <input
             id="signup-password"
             name="password"
@@ -163,6 +196,7 @@ export default function OwnerSignupPage() {
             aria-describedby={fieldErrors.password ? "signup-password-error" : "signup-password-hint"}
             required
           />
+          {fieldErrors.password && <small className="signup-field-error" id="signup-password-error">{fieldErrors.password}</small>}
         </label>
 
         <label className="signup-field" htmlFor="signup-confirm-password">

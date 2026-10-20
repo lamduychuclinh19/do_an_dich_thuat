@@ -5,7 +5,9 @@ import {
 } from "./auth";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://127.0.0.1:8000",
+  // Khi chạy dev, Vite chuyển tiếp /api tới backend local. Chỉ đặt
+  // VITE_API_URL khi backend được host riêng với frontend.
+  baseURL: import.meta.env.VITE_API_URL || "",
   headers: {
     "Content-Type": "application/json",
   },

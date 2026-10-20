@@ -45,6 +45,7 @@ export default function LocationMap({
   longitude,
   radius,
   interactive = false,
+  allowNavigation = false,
   onSelect,
   title = "Vị trí trên bản đồ",
 }) {
@@ -66,10 +67,10 @@ export default function LocationMap({
         <MapContainer
           center={center}
           zoom={point ? 16 : 12}
-          scrollWheelZoom={interactive}
-          dragging={interactive}
-          doubleClickZoom={interactive}
-          zoomControl={interactive}
+          scrollWheelZoom={interactive || allowNavigation}
+          dragging={interactive || allowNavigation}
+          doubleClickZoom={interactive || allowNavigation}
+          zoomControl={interactive || allowNavigation}
         >
           <MapViewSync center={center} hasPoint={Boolean(point)} />
           <MapClickHandler enabled={interactive} onSelect={onSelect} />

@@ -241,7 +241,8 @@ function TranslationPage() {
             return audioUrl;
         }
 
-        return `http://127.0.0.1:8000${audioUrl}`;
+        const apiBaseUrl = import.meta.env.VITE_API_URL || "";
+        return `${apiBaseUrl}${audioUrl}`;
     };
 
     const selectedPoi = pois.find(

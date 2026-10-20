@@ -217,8 +217,32 @@
   gap: 5px;
 }
 
-.poi-information strong {
+.poi-information strong,
+.poi-name-button {
   color: #1b403a;
+}
+
+.poi-name-button {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.poi-name-button:hover {
+  color: #176b5c;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.poi-name-button:focus-visible {
+  outline: 2px solid #397369;
+  outline-offset: 3px;
+  border-radius: 2px;
 }
 
 .poi-information span {
