@@ -25,7 +25,9 @@ POI_ID = "BNR01"
 
 @pytest.fixture(autouse=True)
 def mock_login():
+    # /api/admin/pois dùng require_back_office -> đóng vai SHOP_OWNER
     app.dependency_overrides[require_back_office] = lambda: OWNER
+    # /api/content-requests/admin/... dùng require_system_admin
     app.dependency_overrides[require_system_admin] = lambda: ADMIN
     yield
     app.dependency_overrides.clear()
