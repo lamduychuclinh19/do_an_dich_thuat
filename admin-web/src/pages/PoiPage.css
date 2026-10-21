@@ -79,6 +79,60 @@
   background: transparent;
 }
 
+.owner-id-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.owner-id-filter input {
+  width: 210px;
+  padding: 11px 12px;
+  border: 1px solid #d5dfdc;
+  border-radius: 9px;
+  outline: none;
+  color: #24443e;
+  background: #ffffff;
+}
+
+.owner-id-filter input:focus {
+  border-color: #397369;
+  box-shadow: 0 0 0 3px rgba(57, 115, 105, 0.12);
+}
+
+.owner-id-filter button {
+  padding: 11px 15px;
+  border: 1px solid #153a34;
+  border-radius: 9px;
+  color: #ffffff;
+  background: #153a34;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.owner-id-filter .clear-owner-filter {
+  border-color: #ccd7d4;
+  color: #536662;
+  background: #ffffff;
+}
+
+.poi-owner-information {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.poi-owner-information strong {
+  color: #1c5149;
+}
+
+.poi-owner-information span {
+  color: #82908c;
+  font-size: 12px;
+}
+
 .refresh-button {
   padding: 11px 16px;
   border: 1px solid #ccd7d4;
@@ -227,6 +281,15 @@
   }
 
   .search-box {
+    width: 100%;
+  }
+
+  .owner-id-filter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .owner-id-filter input {
     width: 100%;
   }
 }

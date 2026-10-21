@@ -1,262 +1,188 @@
+"""Nghiệp vụ quản lý tài khoản SHOP_OWNER trên database V2."""
+
+from types import SimpleNamespace
+
 from fastapi import HTTPException, status
 from pwdlib import PasswordHash
 from sqlalchemy.exc import IntegrityError
 
-from app.repositaries.admin_repository import (
-    admin_repository,
-)
+from app.repositaries.people_repository import people_repository
 from app.schemas.admin_schema import (
-    AdminCreate,
-    AdminResetPasswordResponse,
-    AdminUpdate,
+    ResetPasswordResponse,
+    ShopOwnerCreate,
+    ShopOwnerUpdate,
 )
 
 
-# Mật khẩu mặc định của tài khoản nhân viên mới
-# hoặc sau khi chủ quán thực hiện reset.
-DEFAULT_STAFF_PASSWORD = "abc12345"
-
-# Sử dụng Argon2 giống cơ chế đăng nhập hiện tại.
+# Mật khẩu chỉ được dùng làm giá trị ban đầu hoặc khi SYSTEM_ADMIN reset.
+# Database luôn lưu chuỗi hash, không lưu trực tiếp abc12345.
+DEFAULT_SHOP_OWNER_PASSWORD = "abc12345"
 password_hasher = PasswordHash.recommended()
 
 
 class AdminManagementService:
-    def _ensure_owner(
-        self,
-        current_admin: dict,
-    ) -> None:
-        """
-        Chỉ chủ quán mới được sử dụng chức năng
-        quản lý nhân sự.
+    """Các nghiệp vụ nhân sự chỉ dành cho SYSTEM_ADMIN."""
 
-        Kiểm tra này được thực hiện phía backend,
-        nên STAFF không thể vượt qua bằng cách nhập URL.
-        """
+    def _ensure_system_admin(self, current_admin: dict) -> None:
+        """Kiểm tra lại vai trò ở service để bảo vệ nhiều lớp."""
         if (
             current_admin is None
-            or current_admin.get("role") != "OWNER"
+            or current_admin.get("role") != "SYSTEM_ADMIN"
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=(
-                    "Chỉ chủ quán mới được quyền "
-                    "quản lý nhân sự"
+                    "Chỉ quản trị hệ thống mới được quản lý "
+                    "tài khoản chủ địa điểm"
                 ),
             )
 
-    def _get_staff_or_error(
-        self,
-        admin_id: int,
-    ) -> dict:
-        """
-        Tìm tài khoản nhân viên và đảm bảo tài khoản đó
-        không phải OWNER.
-        """
-        admin = admin_repository.get_by_id(
-            admin_id
-        )
+    def _get_shop_owner_or_error(self, person_id: int) -> dict:
+        """Tìm đúng SHOP_OWNER, không cho tác động tài khoản vai trò khác."""
+        person = people_repository.get_by_id(person_id)
 
-        if admin is None:
+        if person is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Không tìm thấy tài khoản",
             )
 
-        if admin["role"] == "OWNER":
+        if person["role"] != "SHOP_OWNER":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=(
-                    "Không thể sửa hoặc đặt lại mật khẩu "
-                    "của tài khoản chủ quán"
+                    "Chức năng này chỉ được tác động đến "
+                    "tài khoản chủ địa điểm"
                 ),
             )
 
-        return admin
+        return person
 
-    def get_all_admins(
+    def get_all_shop_owners(
         self,
         current_admin: dict,
         phone_keyword: str | None = None,
         is_active: bool | None = None,
+        keyword: str | None = None,
     ) -> list[dict]:
-        """
-        Lấy danh sách quản trị viên.
+        """Lấy SHOP_OWNER, tìm theo tên quán/SĐT và lọc trạng thái."""
+        self._ensure_system_admin(current_admin)
 
-        Hỗ trợ:
-        - Tìm kiếm gần đúng theo số điện thoại.
-        - Lọc theo trạng thái hoạt động.
-        """
-        self._ensure_owner(current_admin)
+        # phone_keyword được giữ tạm để router cũ vẫn hoạt động.
+        search_value = keyword or phone_keyword
+        normalized_keyword = (
+            search_value.strip() if search_value else None
+        )
 
-        normalized_phone = None
-
-        if phone_keyword:
-            normalized_phone = (
-                phone_keyword.strip()
-            )
-
-        return admin_repository.get_all(
-            phone_keyword=normalized_phone,
+        return people_repository.get_all_shop_owners(
+            keyword=normalized_keyword,
             is_active=is_active,
         )
 
-    def get_admin_by_id(
+    def get_shop_owner_by_id(
         self,
         admin_id: int,
         current_admin: dict,
     ) -> dict:
-        """Lấy chi tiết một tài khoản quản trị viên."""
-        self._ensure_owner(current_admin)
+        """Lấy chi tiết một SHOP_OWNER theo ID trong bảng people."""
+        self._ensure_system_admin(current_admin)
+        return self._get_shop_owner_or_error(admin_id)
 
-        admin = admin_repository.get_by_id(
-            admin_id
-        )
-
-        if admin is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Không tìm thấy tài khoản",
-            )
-
-        return admin
-
-    def create_staff(
+    def create_shop_owner(
         self,
-        data: AdminCreate,
+        data: ShopOwnerCreate,
         current_admin: dict,
     ) -> dict:
-        """
-        Chủ quán cấp tài khoản mới cho nhân viên.
+        """SYSTEM_ADMIN cấp tài khoản SHOP_OWNER mới."""
+        self._ensure_system_admin(current_admin)
 
-        Tài khoản mới luôn:
-        - Có role STAFF.
-        - Có trạng thái hoạt động.
-        - Có mật khẩu mặc định abc12345.
-        - Phải đổi mật khẩu sau lần đăng nhập đầu tiên.
-        """
-        self._ensure_owner(current_admin)
+        username = data.username.strip().lower()
+        full_name = data.full_name.strip()
+        phone = data.phone.strip() if data.phone else None
+        email = data.email.strip().lower()
 
-        staff_data = data.model_dump()
-
-        # Chuẩn hóa dữ liệu trước khi kiểm tra và lưu.
-        staff_data["username"] = (
-            staff_data["username"]
-            .strip()
-            .lower()
-        )
-
-        staff_data["full_name"] = (
-            staff_data["full_name"].strip()
-        )
-
-        staff_data["phone"] = (
-            staff_data["phone"].strip()
-        )
-
-        staff_data["email"] = (
-            staff_data["email"]
-            .strip()
-            .lower()
-        )
-
-        if not staff_data["full_name"]:
+        if not username:
             raise HTTPException(
-                status_code=(
-                    status.HTTP_422_UNPROCESSABLE_ENTITY
-                ),
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Tên đăng nhập không được để trống",
+            )
+
+        if not full_name:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Họ và tên không được để trống",
             )
 
-        # Kiểm tra username đã tồn tại.
-        existing_username = (
-            admin_repository.get_by_username(
-                staff_data["username"]
+        if not email:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Email không được để trống",
             )
-        )
 
-        if existing_username is not None:
+        # Username, số điện thoại và email là duy nhất trên toàn bảng people,
+        # không chỉ riêng nhóm SHOP_OWNER.
+        if people_repository.get_by_username(username) is not None:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Tên đăng nhập đã được sử dụng",
             )
 
-        # Kiểm tra số điện thoại đã tồn tại.
-        existing_phone = (
-            admin_repository.get_by_phone(
-                staff_data["phone"]
-            )
-        )
-
-        if existing_phone is not None:
+        if (
+            phone is not None
+            and people_repository.get_by_phone(phone) is not None
+        ):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Số điện thoại đã được sử dụng",
             )
 
-        # Kiểm tra email đã tồn tại.
-        existing_email = (
-            admin_repository.get_by_email(
-                staff_data["email"]
-            )
-        )
-
-        if existing_email is not None:
+        if people_repository.get_by_email(email) is not None:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Email đã được sử dụng",
             )
 
-        # Không lưu abc12345 trực tiếp vào SQL.
-        # Chỉ lưu chuỗi hash Argon2.
-        default_password_hash = (
-            password_hasher.hash(
-                DEFAULT_STAFF_PASSWORD
-            )
+        default_password_hash = password_hasher.hash(
+            DEFAULT_SHOP_OWNER_PASSWORD
+        )
+
+        # Repository nhận object có thuộc tính; SimpleNamespace chứa dữ liệu
+        # đã được chuẩn hóa mà không làm thay đổi request ban đầu.
+        normalized_data = SimpleNamespace(
+            username=username,
+            full_name=full_name,
+            phone=phone,
+            email=email,
         )
 
         try:
-            return admin_repository.create_staff(
-                data=staff_data,
+            return people_repository.create_shop_owner(
+                data=normalized_data,
                 password_hash=default_password_hash,
-                created_by_admin_id=(
-                    current_admin["id"]
-                ),
+                created_by_system_admin_id=current_admin["id"],
             )
-
         except IntegrityError as error:
-            # Phòng trường hợp hai request tạo tài khoản
-            # trùng nhau gần như cùng một thời điểm.
+            # Vẫn bắt lỗi UNIQUE từ SQL Server để phòng hai request tạo
+            # dữ liệu trùng nhau tại cùng một thời điểm.
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=(
-                    "Username, số điện thoại hoặc email "
+                    "Tên đăng nhập, số điện thoại hoặc email "
                     "đã được sử dụng"
                 ),
             ) from error
 
-    def update_staff(
+    def update_shop_owner(
         self,
         admin_id: int,
-        data: AdminUpdate,
+        data: ShopOwnerUpdate,
         current_admin: dict,
     ) -> dict:
-        """
-        Sửa thông tin và trạng thái nhân viên.
+        """Sửa thông tin và is_active trong cùng một chức năng."""
+        self._ensure_system_admin(current_admin)
+        existing = self._get_shop_owner_or_error(admin_id)
 
-        Trạng thái hoạt động được sửa tại đây,
-        không có chức năng bật/tắt riêng.
-        """
-        self._ensure_owner(current_admin)
-
-        existing_staff = (
-            self._get_staff_or_error(admin_id)
-        )
-
-        update_data = data.model_dump(
-            exclude_unset=True
-        )
-
-        # Không cho ghi NULL vào các thông tin nhân sự.
+        update_data = data.model_dump(exclude_unset=True)
         update_data = {
             field: value
             for field, value in update_data.items()
@@ -266,140 +192,145 @@ class AdminManagementService:
         if not update_data:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    "Không có thông tin nào để cập nhật"
-                ),
+                detail="Không có thông tin nào để cập nhật",
             )
 
         if "full_name" in update_data:
-            update_data["full_name"] = (
-                update_data["full_name"].strip()
-            )
-
+            update_data["full_name"] = update_data["full_name"].strip()
             if not update_data["full_name"]:
                 raise HTTPException(
-                    status_code=(
-                        status.HTTP_422_UNPROCESSABLE_ENTITY
-                    ),
-                    detail=(
-                        "Họ và tên không được để trống"
-                    ),
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Họ và tên không được để trống",
                 )
 
         if "phone" in update_data:
-            update_data["phone"] = (
-                update_data["phone"].strip()
+            update_data["phone"] = update_data["phone"].strip()
+            duplicate_phone = people_repository.get_by_phone(
+                update_data["phone"]
             )
-
-            duplicated_phone = (
-                admin_repository.get_by_phone(
-                    update_data["phone"]
-                )
-            )
-
             if (
-                duplicated_phone is not None
-                and duplicated_phone["id"]
-                != existing_staff["id"]
+                duplicate_phone is not None
+                and duplicate_phone["id"] != existing["id"]
             ):
                 raise HTTPException(
-                    status_code=(
-                        status.HTTP_409_CONFLICT
-                    ),
-                    detail=(
-                        "Số điện thoại đã được sử dụng"
-                    ),
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Số điện thoại đã được sử dụng",
                 )
 
         if "email" in update_data:
-            update_data["email"] = (
+            update_data["email"] = update_data["email"].strip().lower()
+            duplicate_email = people_repository.get_by_email(
                 update_data["email"]
-                .strip()
-                .lower()
             )
-
-            duplicated_email = (
-                admin_repository.get_by_email(
-                    update_data["email"]
-                )
-            )
-
             if (
-                duplicated_email is not None
-                and duplicated_email["id"]
-                != existing_staff["id"]
+                duplicate_email is not None
+                and duplicate_email["id"] != existing["id"]
             ):
                 raise HTTPException(
-                    status_code=(
-                        status.HTTP_409_CONFLICT
-                    ),
+                    status_code=status.HTTP_409_CONFLICT,
                     detail="Email đã được sử dụng",
                 )
 
-        try:
-            updated_staff = (
-                admin_repository.update_staff(
-                    admin_id=admin_id,
-                    data=update_data,
-                )
-            )
+        # Tên quán không được cập nhật ở đây vì nó chính là pois.name.
+        # Repository chỉ nhận các trường thuộc bảng people. Những trường
+        # frontend không gửi sẽ được giữ nguyên từ dữ liệu hiện có.
+        merged_data = SimpleNamespace(
+            full_name=update_data.get(
+                "full_name",
+                existing["full_name"],
+            ),
+            phone=update_data.get("phone", existing["phone"]),
+            email=update_data.get("email", existing["email"]),
+            is_active=update_data.get(
+                "is_active",
+                existing["is_active"],
+            ),
+        )
 
+        try:
+            updated = people_repository.update_shop_owner(
+                person_id=admin_id,
+                data=merged_data,
+            )
         except IntegrityError as error:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=(
-                    "Số điện thoại hoặc email "
-                    "đã được sử dụng"
-                ),
+                detail="Số điện thoại hoặc email đã được sử dụng",
             ) from error
 
-        if updated_staff is None:
+        if updated is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Không tìm thấy nhân viên",
+                detail="Không tìm thấy chủ địa điểm",
             )
 
-        return updated_staff
+        return updated
 
-    def reset_staff_password(
+    def reset_shop_owner_password(
         self,
         admin_id: int,
         current_admin: dict,
-    ) -> AdminResetPasswordResponse:
-        """
-        Đưa mật khẩu nhân viên về abc12345.
+    ) -> ResetPasswordResponse:
+        """Đặt mật khẩu về abc12345 và buộc đổi ở lần đăng nhập sau."""
+        self._ensure_system_admin(current_admin)
+        self._get_shop_owner_or_error(admin_id)
 
-        Đồng thời must_change_password được đặt thành 1.
-        """
-        self._ensure_owner(current_admin)
-        self._get_staff_or_error(admin_id)
-
-        default_password_hash = (
-            password_hasher.hash(
-                DEFAULT_STAFF_PASSWORD
-            )
+        default_password_hash = password_hasher.hash(
+            DEFAULT_SHOP_OWNER_PASSWORD
         )
 
-        was_updated = (
-            admin_repository.reset_staff_password(
-                admin_id=admin_id,
-                password_hash=default_password_hash,
-            )
+        was_updated = people_repository.reset_shop_owner_password(
+            person_id=admin_id,
+            password_hash=default_password_hash,
         )
 
         if not was_updated:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Không tìm thấy nhân viên",
+                detail="Không tìm thấy chủ địa điểm",
             )
 
-        return AdminResetPasswordResponse(
-            message=(
-                "Đã đặt lại mật khẩu về abc12345"
-            )
+        return ResetPasswordResponse(
+            message="Đã đặt lại mật khẩu về abc12345"
         )
 
+    # Tên cũ được giữ tạm để frontend/router cũ chưa bị gãy.
+    def get_all_admins(
+        self,
+        current_admin: dict,
+        phone_keyword: str | None = None,
+        is_active: bool | None = None,
+    ) -> list[dict]:
+        return self.get_all_shop_owners(
+            current_admin=current_admin,
+            phone_keyword=phone_keyword,
+            is_active=is_active,
+        )
 
-admin_management_service = (
-    AdminManagementService()
-)
+    def get_admin_by_id(self, admin_id: int, current_admin: dict) -> dict:
+        return self.get_shop_owner_by_id(admin_id, current_admin)
+
+    def create_staff(
+        self,
+        data: ShopOwnerCreate,
+        current_admin: dict,
+    ) -> dict:
+        return self.create_shop_owner(data, current_admin)
+
+    def update_staff(
+        self,
+        admin_id: int,
+        data: ShopOwnerUpdate,
+        current_admin: dict,
+    ) -> dict:
+        return self.update_shop_owner(admin_id, data, current_admin)
+
+    def reset_staff_password(
+        self,
+        admin_id: int,
+        current_admin: dict,
+    ) -> ResetPasswordResponse:
+        return self.reset_shop_owner_password(admin_id, current_admin)
+
+
+admin_management_service = AdminManagementService()

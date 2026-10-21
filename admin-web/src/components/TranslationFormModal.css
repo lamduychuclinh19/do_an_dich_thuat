@@ -88,6 +88,49 @@
   opacity: 0.7;
 }
 
+.translation-generation-note {
+  padding: 13px 15px;
+  border: 1px solid #e7d7b5;
+  border-radius: 10px;
+  color: #74551f;
+  background: #fff8e9;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.source-mode-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 5px;
+  border-radius: 11px;
+  background: #edf2f0;
+}
+
+.source-mode-tabs button {
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 8px;
+  color: #61736e;
+  background: transparent;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.source-mode-tabs button.active {
+  color: #ffffff;
+  background: #1c5149;
+  box-shadow: 0 4px 12px rgba(28, 81, 73, 0.18);
+}
+
+.text-file-note {
+  margin: 8px 0 0;
+  color: #7d8b87;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .character-count {
   margin-top: 7px;
   color: #87938f;

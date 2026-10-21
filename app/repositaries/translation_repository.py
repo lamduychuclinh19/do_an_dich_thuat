@@ -1,78 +1,51 @@
+"""Repository SQL Server cho bảng translations, có kiểm tra owner_id."""
+
 from sqlalchemy import text
+
 from app.database import engine
 
 
 class TranslationRepository:
-    def _convert_row_to_dict(self, row) -> dict | None:
+    """Truy cập nội dung thuyết minh và cô lập dữ liệu giữa các chủ quán."""
+
+    SELECT_COLUMNS = """
+        translation.id,
+        translation.poi_id,
+        translation.language_code,
+        translation.title,
+        translation.narration_text,
+        translation.audio_url,
+        translation.is_machine_generated,
+        translation.is_active,
+        translation.created_at,
+        translation.updated_at
+    """
+
+    @staticmethod
+    def _row_to_dict(row) -> dict | None:
         if row is None:
             return None
 
         translation = dict(row)
-        translation["is_active"] = bool(
-            translation["is_active"]
+        translation["is_machine_generated"] = bool(
+            translation["is_machine_generated"]
         )
-
+        translation["is_active"] = bool(translation["is_active"])
         return translation
-
-    def create(self, data: dict) -> dict:
-        query = text(
-            """
-            INSERT INTO dbo.translations
-            (
-                poi_id,
-                language_code,
-                title,
-                narration_text,
-                audio_url,
-                is_active
-            )
-            OUTPUT
-                INSERTED.id,
-                INSERTED.poi_id,
-                INSERTED.language_code,
-                INSERTED.title,
-                INSERTED.narration_text,
-                INSERTED.audio_url,
-                INSERTED.is_active
-            VALUES
-            (
-                :poi_id,
-                :language_code,
-                :title,
-                :narration_text,
-                :audio_url,
-                1
-            )
-            """
-        )
-
-        with engine.begin() as connection:
-            row = connection.execute(
-                query,
-                data,
-            ).mappings().one()
-
-        return self._convert_row_to_dict(row)
 
     def get_by_poi_and_language(
         self,
         poi_id: int,
         language_code: str,
     ) -> dict | None:
+        """Public chỉ lấy bản dịch đang hoạt động."""
         query = text(
-            """
-            SELECT
-                id,
-                poi_id,
-                language_code,
-                title,
-                narration_text,
-                audio_url,
-                is_active
-            FROM dbo.translations
-            WHERE poi_id = :poi_id
-              AND language_code = :language_code
-              AND is_active = 1
+            f"""
+            SELECT {self.SELECT_COLUMNS}
+            FROM dbo.translations AS translation
+            WHERE translation.poi_id = :poi_id
+              AND translation.language_code = :language_code
+              AND translation.is_active = 1
             """
         )
 
@@ -85,23 +58,17 @@ class TranslationRepository:
                 },
             ).mappings().first()
 
-        return self._convert_row_to_dict(row)
+        return self._row_to_dict(row)
 
     def get_all_by_poi(self, poi_id: int) -> list[dict]:
+        """Public chỉ thấy các ngôn ngữ đang hoạt động."""
         query = text(
-            """
-            SELECT
-                id,
-                poi_id,
-                language_code,
-                title,
-                narration_text,
-                audio_url,
-                is_active
-            FROM dbo.translations
-            WHERE poi_id = :poi_id
-              AND is_active = 1
-            ORDER BY language_code
+            f"""
+            SELECT {self.SELECT_COLUMNS}
+            FROM dbo.translations AS translation
+            WHERE translation.poi_id = :poi_id
+              AND translation.is_active = 1
+            ORDER BY translation.language_code
             """
         )
 
@@ -111,26 +78,46 @@ class TranslationRepository:
                 {"poi_id": poi_id},
             ).mappings().all()
 
-        return [
-            self._convert_row_to_dict(row)
-            for row in rows
-        ]
-    def get_by_id(
+        return [self._row_to_dict(row) for row in rows]
+
+    def get_by_id_for_owner(
+        self,
+        translation_id: int,
+        owner_id: int,
+    ) -> dict | None:
+        """Chỉ trả bản dịch nếu POI của nó thuộc đúng SHOP_OWNER."""
+        query = text(
+            f"""
+            SELECT {self.SELECT_COLUMNS}
+            FROM dbo.translations AS translation
+            INNER JOIN dbo.pois AS poi
+                ON poi.id = translation.poi_id
+            WHERE translation.id = :translation_id
+              AND poi.owner_id = :owner_id
+            """
+        )
+
+        with engine.connect() as connection:
+            row = connection.execute(
+                query,
+                {
+                    "translation_id": translation_id,
+                    "owner_id": owner_id,
+                },
+            ).mappings().first()
+
+        return self._row_to_dict(row)
+
+    def get_by_id_for_system_admin(
         self,
         translation_id: int,
     ) -> dict | None:
+        """SYSTEM_ADMIN được tìm bản dịch thuộc bất kỳ POI nào."""
         query = text(
-            """
-            SELECT
-                id,
-                poi_id,
-                language_code,
-                title,
-                narration_text,
-                audio_url,
-                is_active
-            FROM dbo.translations
-            WHERE id = :translation_id
+            f"""
+            SELECT {self.SELECT_COLUMNS}
+            FROM dbo.translations AS translation
+            WHERE translation.id = :translation_id
             """
         )
 
@@ -140,211 +127,23 @@ class TranslationRepository:
                 {"translation_id": translation_id},
             ).mappings().first()
 
-        return self._convert_row_to_dict(row)
+        return self._row_to_dict(row)
 
-    def update(self,translation_id: int,data: dict,) -> dict | None:
-        allowed_fields = {
-            "title",
-            "narration_text",
-            "audio_url",
-        }
-
-        fields_to_update = [
-            field
-            for field in data
-            if field in allowed_fields
-        ]
-
-        if not fields_to_update:
-            return self.get_by_id(translation_id)
-
-        set_statements = [
-            f"{field} = :{field}"
-            for field in fields_to_update
-        ]
-
-        set_statements.append(
-            "updated_at = SYSUTCDATETIME()"
-        )
-
+    def get_all_for_owner_by_poi(
+        self,
+        poi_id: int,
+        owner_id: int,
+    ) -> list[dict]:
+        """SHOP_OWNER thấy cả bản dịch đang hiện và đang ẩn của POI mình."""
         query = text(
             f"""
-            UPDATE dbo.translations
-            SET {", ".join(set_statements)}
-            OUTPUT
-                INSERTED.id,
-                INSERTED.poi_id,
-                INSERTED.language_code,
-                INSERTED.title,
-                INSERTED.narration_text,
-                INSERTED.audio_url,
-                INSERTED.is_active
-            WHERE id = :translation_id
-            """
-        )
-
-        parameters = {
-            **data,
-            "translation_id": translation_id,
-        }
-
-        with engine.begin() as connection:
-            row = connection.execute(
-                query,
-                parameters,
-            ).mappings().first()
-
-        return self._convert_row_to_dict(row)
-    def get_all_for_admin_by_poi(self,poi_id: int,) -> list:
-        query = text(
-            """
-            SELECT
-                id,
-                poi_id,
-                language_code,
-                title,
-                narration_text,
-                audio_url,
-                is_active
-            FROM dbo.translations
-            WHERE poi_id = :poi_id
-            ORDER BY language_code
-            """
-        )
-
-        with engine.connect() as connection:
-            result = connection.execute(
-                query,
-                {"poi_id": poi_id},
-            )
-
-            return [
-                dict(row)
-                for row in result.mappings().all()
-            ]
-
-    def set_visibility(self,translation_id: int,is_active: bool,) -> dict | None:
-        query = text(
-            """
-            UPDATE dbo.translations
-            SET
-                is_active = :is_active,
-                updated_at = SYSUTCDATETIME()
-            OUTPUT
-                INSERTED.id,
-                INSERTED.poi_id,
-                INSERTED.language_code,
-                INSERTED.title,
-                INSERTED.narration_text,
-                INSERTED.audio_url,
-                INSERTED.is_active
-            WHERE id = :translation_id
-            """
-        )
-
-        with engine.begin() as connection:
-            result = connection.execute(
-                query,
-                {
-                    "translation_id": translation_id,
-                    "is_active": is_active,
-                },
-            )
-
-            row = result.mappings().first()
-
-            if row is None:
-                return None
-
-            return dict(row)
-    def get_public_guides(
-        self,
-        requested_language_code: str,
-    ) -> list[dict]:
-        """
-        Lấy nội dung thuyết minh của tất cả POI đang hiển thị.
-
-        Thứ tự ưu tiên ngôn ngữ:
-        1. Ngôn ngữ khách yêu cầu.
-        2. Tiếng Anh nếu chưa có ngôn ngữ yêu cầu.
-        3. Tiếng Việt nếu cũng chưa có tiếng Anh.
-
-        POI bị ẩn hoặc bản dịch bị ẩn sẽ không được trả ra.
-        """
-
-        query = text(
-            """
-            SELECT
-                p.id AS poi_id,
-                p.name AS poi_name,
-                p.address,
-                p.latitude,
-                p.longitude,
-                p.trigger_radius_meters,
-
-                :requested_language_code
-                    AS requested_language_code,
-
-                selected_translation.language_code,
-                selected_translation.title,
-                selected_translation.narration_text,
-                selected_translation.audio_url,
-
-                CASE
-                    WHEN selected_translation.language_code
-                         = :requested_language_code
-                    THEN CAST(0 AS BIT)
-                    ELSE CAST(1 AS BIT)
-                END AS is_fallback
-
-            FROM dbo.pois AS p
-
-            OUTER APPLY
-            (
-                /*
-                Tìm một bản dịch phù hợp nhất cho từng POI.
-
-                TOP 1 kết hợp ORDER BY sẽ ưu tiên:
-                - Ngôn ngữ khách yêu cầu.
-                - Sau đó là tiếng Anh.
-                - Cuối cùng là tiếng Việt.
-                */
-                SELECT TOP 1
-                    t.language_code,
-                    t.title,
-                    t.narration_text,
-                    t.audio_url
-                FROM dbo.translations AS t
-                WHERE t.poi_id = p.id
-                  AND t.is_active = 1
-                  AND t.language_code IN
-                  (
-                      :requested_language_code,
-                      'en',
-                      'vi'
-                  )
-                ORDER BY
-                    CASE
-                        WHEN t.language_code
-                             = :requested_language_code
-                        THEN 1
-                        WHEN t.language_code = 'en'
-                        THEN 2
-                        WHEN t.language_code = 'vi'
-                        THEN 3
-                        ELSE 4
-                    END
-            ) AS selected_translation
-
-            WHERE p.is_active = 1
-
-              /*
-              Nếu POI không có cả ngôn ngữ yêu cầu,
-              tiếng Anh lẫn tiếng Việt thì không trả POI đó.
-              */
-              AND selected_translation.language_code IS NOT NULL
-
-            ORDER BY p.id
+            SELECT {self.SELECT_COLUMNS}
+            FROM dbo.translations AS translation
+            INNER JOIN dbo.pois AS poi
+                ON poi.id = translation.poi_id
+            WHERE translation.poi_id = :poi_id
+              AND poi.owner_id = :owner_id
+            ORDER BY translation.language_code
             """
         )
 
@@ -352,23 +151,500 @@ class TranslationRepository:
             rows = connection.execute(
                 query,
                 {
-                    "requested_language_code":
-                        requested_language_code,
+                    "poi_id": poi_id,
+                    "owner_id": owner_id,
                 },
             ).mappings().all()
 
-        guides = []
+        return [self._row_to_dict(row) for row in rows]
 
-        for row in rows:
-            guide = dict(row)
+    def get_all_for_system_admin_by_poi(
+        self,
+        poi_id: int,
+    ) -> list[dict]:
+        """SYSTEM_ADMIN thấy cả bản dịch đang hiện và đang ẩn của POI."""
+        query = text(
+            f"""
+            SELECT {self.SELECT_COLUMNS}
+            FROM dbo.translations AS translation
+            WHERE translation.poi_id = :poi_id
+            ORDER BY translation.language_code
+            """
+        )
 
-            # SQL Server trả BIT; chuyển về bool Python
-            # để FastAPI xuất true/false đúng chuẩn JSON.
-            guide["is_fallback"] = bool(
-                guide["is_fallback"]
+        with engine.connect() as connection:
+            rows = connection.execute(
+                query,
+                {"poi_id": poi_id},
+            ).mappings().all()
+
+        return [self._row_to_dict(row) for row in rows]
+
+    def create_many_for_owner(
+        self,
+        records: list[dict],
+        owner_id: int,
+    ) -> list[dict] | None:
+        """Tạo đủ năm ngôn ngữ trong cùng một transaction SQL."""
+        if not records:
+            return []
+
+        poi_id = records[0]["poi_id"]
+        owner_query = text(
+            """
+            SELECT 1
+            FROM dbo.pois
+            WHERE id = :poi_id
+              AND owner_id = :owner_id
+            """
+        )
+        insert_query = text(
+            """
+            INSERT INTO dbo.translations
+            (
+                poi_id,
+                language_code,
+                title,
+                narration_text,
+                audio_url,
+                is_machine_generated,
+                is_active
             )
+            VALUES
+            (
+                :poi_id,
+                :language_code,
+                :title,
+                :narration_text,
+                :audio_url,
+                :is_machine_generated,
+                1
+            )
+            """
+        )
+        select_query = text(
+            f"""
+            SELECT {self.SELECT_COLUMNS}
+            FROM dbo.translations AS translation
+            INNER JOIN dbo.pois AS poi
+                ON poi.id = translation.poi_id
+            WHERE translation.poi_id = :poi_id
+              AND poi.owner_id = :owner_id
+            ORDER BY translation.language_code
+            """
+        )
 
-            guides.append(guide)
+        with engine.begin() as connection:
+            owns_poi = connection.execute(
+                owner_query,
+                {"poi_id": poi_id, "owner_id": owner_id},
+            ).first()
 
-        return guides        
+            if owns_poi is None:
+                return None
+
+            for record in records:
+                connection.execute(insert_query, record)
+
+            rows = connection.execute(
+                select_query,
+                {"poi_id": poi_id, "owner_id": owner_id},
+            ).mappings().all()
+
+        return [self._row_to_dict(row) for row in rows]
+
+    def create_many_as_system_admin(
+        self,
+        records: list[dict],
+    ) -> list[dict] | None:
+        """SYSTEM_ADMIN tạo năm bản dịch cho một POI bất kỳ.
+
+        Repository vẫn kiểm tra POI tồn tại trước khi INSERT để tránh tạo
+        nội dung mồ côi nếu client gửi một ``poi_id`` không hợp lệ.
+        """
+        if not records:
+            return []
+
+        poi_id = records[0]["poi_id"]
+        poi_query = text(
+            """
+            SELECT 1
+            FROM dbo.pois
+            WHERE id = :poi_id
+            """
+        )
+        insert_query = text(
+            """
+            INSERT INTO dbo.translations
+            (
+                poi_id,
+                language_code,
+                title,
+                narration_text,
+                audio_url,
+                is_machine_generated,
+                is_active
+            )
+            VALUES
+            (
+                :poi_id,
+                :language_code,
+                :title,
+                :narration_text,
+                :audio_url,
+                :is_machine_generated,
+                1
+            )
+            """
+        )
+        select_query = text(
+            f"""
+            SELECT {self.SELECT_COLUMNS}
+            FROM dbo.translations AS translation
+            WHERE translation.poi_id = :poi_id
+            ORDER BY translation.language_code
+            """
+        )
+
+        with engine.begin() as connection:
+            poi_exists = connection.execute(
+                poi_query,
+                {"poi_id": poi_id},
+            ).first()
+
+            if poi_exists is None:
+                return None
+
+            for record in records:
+                connection.execute(insert_query, record)
+
+            rows = connection.execute(
+                select_query,
+                {"poi_id": poi_id},
+            ).mappings().all()
+
+        return [self._row_to_dict(row) for row in rows]
+
+    def replace_all_for_owner(
+        self,
+        records: list[dict],
+        owner_id: int,
+    ) -> list[dict] | None:
+        """Cập nhật hoặc bổ sung đủ năm ngôn ngữ trong một transaction."""
+        if not records:
+            return []
+
+        poi_id = records[0]["poi_id"]
+        owner_query = text(
+            """
+            SELECT 1
+            FROM dbo.pois
+            WHERE id = :poi_id
+              AND owner_id = :owner_id
+            """
+        )
+        update_query = text(
+            """
+            UPDATE dbo.translations
+            SET
+                title = :title,
+                narration_text = :narration_text,
+                audio_url = :audio_url,
+                is_machine_generated = :is_machine_generated,
+                updated_at = SYSUTCDATETIME()
+            WHERE poi_id = :poi_id
+              AND language_code = :language_code
+            """
+        )
+        insert_query = text(
+            """
+            INSERT INTO dbo.translations
+            (
+                poi_id,
+                language_code,
+                title,
+                narration_text,
+                audio_url,
+                is_machine_generated,
+                is_active
+            )
+            VALUES
+            (
+                :poi_id,
+                :language_code,
+                :title,
+                :narration_text,
+                :audio_url,
+                :is_machine_generated,
+                1
+            )
+            """
+        )
+        select_query = text(
+            f"""
+            SELECT {self.SELECT_COLUMNS}
+            FROM dbo.translations AS translation
+            INNER JOIN dbo.pois AS poi
+                ON poi.id = translation.poi_id
+            WHERE translation.poi_id = :poi_id
+              AND poi.owner_id = :owner_id
+            ORDER BY translation.language_code
+            """
+        )
+
+        with engine.begin() as connection:
+            owns_poi = connection.execute(
+                owner_query,
+                {"poi_id": poi_id, "owner_id": owner_id},
+            ).first()
+
+            if owns_poi is None:
+                return None
+
+            for record in records:
+                result = connection.execute(update_query, record)
+                if result.rowcount == 0:
+                    connection.execute(insert_query, record)
+
+            rows = connection.execute(
+                select_query,
+                {"poi_id": poi_id, "owner_id": owner_id},
+            ).mappings().all()
+
+        return [self._row_to_dict(row) for row in rows]
+
+    def replace_all_as_system_admin(
+        self,
+        records: list[dict],
+    ) -> list[dict] | None:
+        """SYSTEM_ADMIN cập nhật hoặc bổ sung năm ngôn ngữ của mọi POI."""
+        if not records:
+            return []
+
+        poi_id = records[0]["poi_id"]
+        poi_query = text(
+            """
+            SELECT 1
+            FROM dbo.pois
+            WHERE id = :poi_id
+            """
+        )
+        update_query = text(
+            """
+            UPDATE dbo.translations
+            SET
+                title = :title,
+                narration_text = :narration_text,
+                audio_url = :audio_url,
+                is_machine_generated = :is_machine_generated,
+                updated_at = SYSUTCDATETIME()
+            WHERE poi_id = :poi_id
+              AND language_code = :language_code
+            """
+        )
+        insert_query = text(
+            """
+            INSERT INTO dbo.translations
+            (
+                poi_id,
+                language_code,
+                title,
+                narration_text,
+                audio_url,
+                is_machine_generated,
+                is_active
+            )
+            VALUES
+            (
+                :poi_id,
+                :language_code,
+                :title,
+                :narration_text,
+                :audio_url,
+                :is_machine_generated,
+                1
+            )
+            """
+        )
+        select_query = text(
+            f"""
+            SELECT {self.SELECT_COLUMNS}
+            FROM dbo.translations AS translation
+            WHERE translation.poi_id = :poi_id
+            ORDER BY translation.language_code
+            """
+        )
+
+        with engine.begin() as connection:
+            poi_exists = connection.execute(
+                poi_query,
+                {"poi_id": poi_id},
+            ).first()
+
+            if poi_exists is None:
+                return None
+
+            for record in records:
+                result = connection.execute(update_query, record)
+                if result.rowcount == 0:
+                    connection.execute(insert_query, record)
+
+            rows = connection.execute(
+                select_query,
+                {"poi_id": poi_id},
+            ).mappings().all()
+
+        return [self._row_to_dict(row) for row in rows]
+
+    def update_audio_for_owner(
+        self,
+        translation_id: int,
+        owner_id: int,
+        audio_url: str,
+    ) -> dict | None:
+        """Đổi audio nếu bản dịch thuộc POI của SHOP_OWNER hiện tại."""
+        query = text(
+            f"""
+            SET NOCOUNT ON;
+
+            UPDATE translation
+            SET
+                audio_url = :audio_url,
+                updated_at = SYSUTCDATETIME()
+            FROM dbo.translations AS translation
+            INNER JOIN dbo.pois AS poi
+                ON poi.id = translation.poi_id
+            WHERE translation.id = :translation_id
+              AND poi.owner_id = :owner_id;
+
+            SELECT {self.SELECT_COLUMNS}
+            FROM dbo.translations AS translation
+            INNER JOIN dbo.pois AS poi
+                ON poi.id = translation.poi_id
+            WHERE translation.id = :translation_id
+              AND poi.owner_id = :owner_id;
+            """
+        )
+
+        with engine.begin() as connection:
+            row = connection.execute(
+                query,
+                {
+                    "translation_id": translation_id,
+                    "owner_id": owner_id,
+                    "audio_url": audio_url,
+                },
+            ).mappings().first()
+
+        return self._row_to_dict(row)
+
+    def update_audio_as_system_admin(
+        self,
+        translation_id: int,
+        audio_url: str,
+    ) -> dict | None:
+        """SYSTEM_ADMIN tạo lại audio của một bản dịch bất kỳ."""
+        query = text(
+            f"""
+            SET NOCOUNT ON;
+
+            UPDATE dbo.translations
+            SET
+                audio_url = :audio_url,
+                updated_at = SYSUTCDATETIME()
+            WHERE id = :translation_id;
+
+            SELECT {self.SELECT_COLUMNS}
+            FROM dbo.translations AS translation
+            WHERE translation.id = :translation_id;
+            """
+        )
+
+        with engine.begin() as connection:
+            row = connection.execute(
+                query,
+                {
+                    "translation_id": translation_id,
+                    "audio_url": audio_url,
+                },
+            ).mappings().first()
+
+        return self._row_to_dict(row)
+
+    def set_visibility_for_owner(
+        self,
+        translation_id: int,
+        owner_id: int,
+        is_active: bool,
+    ) -> dict | None:
+        """Ẩn/hiện bản dịch thuộc đúng chủ quán, không xóa dữ liệu/audio."""
+        query = text(
+            f"""
+            SET NOCOUNT ON;
+
+            UPDATE translation
+            SET
+                is_active = :is_active,
+                updated_at = SYSUTCDATETIME()
+            FROM dbo.translations AS translation
+            INNER JOIN dbo.pois AS poi
+                ON poi.id = translation.poi_id
+            WHERE translation.id = :translation_id
+              AND poi.owner_id = :owner_id;
+
+            SELECT {self.SELECT_COLUMNS}
+            FROM dbo.translations AS translation
+            INNER JOIN dbo.pois AS poi
+                ON poi.id = translation.poi_id
+            WHERE translation.id = :translation_id
+              AND poi.owner_id = :owner_id;
+            """
+        )
+
+        with engine.begin() as connection:
+            row = connection.execute(
+                query,
+                {
+                    "translation_id": translation_id,
+                    "owner_id": owner_id,
+                    "is_active": is_active,
+                },
+            ).mappings().first()
+
+        return self._row_to_dict(row)
+
+    def set_visibility_as_system_admin(
+        self,
+        translation_id: int,
+        is_active: bool,
+    ) -> dict | None:
+        """SYSTEM_ADMIN ẩn/hiện bản dịch bất kỳ nhưng không xóa dữ liệu."""
+        query = text(
+            f"""
+            SET NOCOUNT ON;
+
+            UPDATE dbo.translations
+            SET
+                is_active = :is_active,
+                updated_at = SYSUTCDATETIME()
+            WHERE id = :translation_id;
+
+            SELECT {self.SELECT_COLUMNS}
+            FROM dbo.translations AS translation
+            WHERE translation.id = :translation_id;
+            """
+        )
+
+        with engine.begin() as connection:
+            row = connection.execute(
+                query,
+                {
+                    "translation_id": translation_id,
+                    "is_active": is_active,
+                },
+            ).mappings().first()
+
+        return self._row_to_dict(row)
+
+
 translation_repository = TranslationRepository()

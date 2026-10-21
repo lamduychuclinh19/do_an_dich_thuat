@@ -1,30 +1,20 @@
-from fastapi import (
-    APIRouter,
-    Depends,
-    File,
-    Form,
-    UploadFile,
-    status,
-)
+"""API quản trị Translation dùng chung cho SYSTEM_ADMIN và SHOP_OWNER."""
 
-from app.dependencies.auth_dependency import require_admin
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+
+from app.dependencies.auth_dependency import require_back_office
 from app.schemas.translation_schema import (
-    LanguageCode,
-    TranslationCreate,
     TranslationResponse,
-    TranslationUpdate,
+    TranslationSourceCreate,
+    TranslationSourceUpdate,
     TranslationVisibility,
 )
-from app.services.translation_service import (
-    translation_service,
-)
+from app.services.translation_service import translation_service
 
 
-# Toàn bộ API trong router này chỉ dành cho admin.
 router = APIRouter(
     prefix="/api/admin/translations",
-    tags=["ADMIN - Translations"],
-    dependencies=[Depends(require_admin)],
+    tags=["BACK OFFICE - Translations"],
 )
 
 
@@ -32,120 +22,91 @@ router = APIRouter(
     "/poi/{poi_id}",
     response_model=list[TranslationResponse],
 )
-def get_all_translations_for_admin(
+def get_all_translations_for_back_office(
     poi_id: int,
+    current_person: dict = Depends(require_back_office),
 ):
-    """
-    Lấy tất cả bản dịch của POI.
-
-    Admin nhìn thấy cả bản dịch đang hoạt động
-    và bản dịch đang bị ẩn.
-    """
-
-    return (
-        translation_service
-        .get_all_translations_for_admin(poi_id)
+    """SYSTEM_ADMIN xem mọi POI; SHOP_OWNER chỉ xem POI của mình."""
+    return translation_service.get_all_translations_for_back_office(
+        poi_id=poi_id,
+        current_person=current_person,
     )
 
 
 @router.post(
-    "",
-    response_model=TranslationResponse,
+    "/from-vietnamese",
+    response_model=list[TranslationResponse],
     status_code=status.HTTP_201_CREATED,
 )
-async def create_translation(
-    data: TranslationCreate,
+async def create_from_vietnamese(
+    data: TranslationSourceCreate,
+    current_person: dict = Depends(require_back_office),
 ):
-    """
-    Tạo bản dịch bằng dữ liệu JSON.
-
-    Backend tự chuyển narration_text thành MP3,
-    admin không cần cung cấp audio_url.
-    """
-
-    return await translation_service.create_translation(
-        data
+    """Nhập một nội dung Việt và tự tạo năm ngôn ngữ cùng năm audio."""
+    return await translation_service.create_from_vietnamese_for_back_office(
+        data=data,
+        current_person=current_person,
     )
 
 
 @router.post(
-    "/from-text-file",
-    response_model=TranslationResponse,
+    "/from-vietnamese-text-file",
+    response_model=list[TranslationResponse],
     status_code=status.HTTP_201_CREATED,
 )
-async def create_translation_from_text_file(
-    poi_id: int = Form(
-        ...,
-        gt=0,
-    ),
-    language_code: LanguageCode = Form(...),
-    title: str = Form(
-        ...,
-        min_length=1,
-    ),
+async def create_from_vietnamese_text_file(
+    poi_id: int = Form(..., gt=0),
+    title: str = Form(..., min_length=1, max_length=200),
     text_file: UploadFile = File(...),
+    current_person: dict = Depends(require_back_office),
 ):
-    """
-    Tạo bản dịch từ file TXT UTF-8.
-
-    Nội dung file trở thành narration_text,
-    sau đó backend tự tạo file MP3.
-    """
-
+    """Tải một file TXT tiếng Việt và tự tạo đủ năm ngôn ngữ/audio."""
     return await (
         translation_service
-        .create_translation_from_text_file(
+        .create_from_vietnamese_text_file_for_back_office(
             poi_id=poi_id,
-            language_code=language_code,
             title=title,
             text_file=text_file,
+            current_person=current_person,
         )
     )
 
 
 @router.patch(
-    "/{translation_id}",
-    response_model=TranslationResponse,
+    "/poi/{poi_id}/source",
+    response_model=list[TranslationResponse],
 )
-async def update_translation(
-    translation_id: int,
-    data: TranslationUpdate,
+async def update_vietnamese_source(
+    poi_id: int,
+    data: TranslationSourceUpdate,
+    current_person: dict = Depends(require_back_office),
 ):
-    """
-    Cập nhật bản dịch bằng JSON.
-
-    Nếu narration_text thay đổi,
-    backend tự sinh lại audio.
-    """
-
-    return await translation_service.update_translation(
-        translation_id=translation_id,
+    """Sửa nguồn Việt rồi tự tạo lại bản dịch và audio của cả năm ngôn ngữ."""
+    return await translation_service.update_vietnamese_source_for_back_office(
+        poi_id=poi_id,
         data=data,
+        current_person=current_person,
     )
 
 
 @router.patch(
-    "/{translation_id}/from-text-file",
-    response_model=TranslationResponse,
+    "/poi/{poi_id}/source/from-text-file",
+    response_model=list[TranslationResponse],
 )
-async def update_translation_from_text_file(
-    translation_id: int,
+async def update_vietnamese_source_from_text_file(
+    poi_id: int,
     text_file: UploadFile = File(...),
-    title: str | None = Form(default=None),
+    title: str | None = Form(default=None, max_length=200),
+    current_person: dict = Depends(require_back_office),
 ):
-    """
-    Thay nội dung thuyết minh bằng file TXT mới.
-
-    Backend đọc file, cập nhật narration_text,
-    tạo MP3 mới rồi mới xóa MP3 cũ.
-    """
-
+    """Thay nguồn Việt bằng TXT rồi tự tạo lại đủ năm ngôn ngữ/audio."""
     return await (
         translation_service
-        .update_translation_from_text_file(
-            translation_id=translation_id,
+        .update_vietnamese_source_from_text_file_for_back_office(
+            poi_id=poi_id,
             text_file=text_file,
             title=title,
+            current_person=current_person,
         )
     )
 
@@ -156,18 +117,12 @@ async def update_translation_from_text_file(
 )
 async def regenerate_translation_audio(
     translation_id: int,
+    current_person: dict = Depends(require_back_office),
 ):
-    """
-    Tạo lại MP3 từ narration_text đang có trong SQL.
-
-    Dùng khi audio cũ bị lỗi hoặc cần tạo lại giọng đọc.
-    """
-
-    return await (
-        translation_service
-        .regenerate_translation_audio(
-            translation_id
-        )
+    """Tạo lại MP3 sau khi service kiểm tra vai trò và quyền sở hữu."""
+    return await translation_service.regenerate_audio_for_back_office(
+        translation_id=translation_id,
+        current_person=current_person,
     )
 
 
@@ -178,17 +133,11 @@ async def regenerate_translation_audio(
 def set_translation_visibility(
     translation_id: int,
     data: TranslationVisibility,
+    current_person: dict = Depends(require_back_office),
 ):
-    """
-    Ẩn hoặc hiện bản dịch.
-
-    Việc ẩn không xóa narration_text và file MP3.
-    """
-
-    return (
-        translation_service
-        .set_translation_visibility(
-            translation_id,
-            data.is_active,
-        )
+    """Ẩn/hiện bản dịch theo quyền, không xóa dữ liệu hoặc audio."""
+    return translation_service.set_visibility_for_back_office(
+        translation_id=translation_id,
+        is_active=data.is_active,
+        current_person=current_person,
     )
