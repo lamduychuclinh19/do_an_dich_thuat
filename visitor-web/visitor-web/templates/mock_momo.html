@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}VN Pay (Mock){% endblock %}
+{% block content %}
+<section class="gate-card">
+  <h1>VN Pay (Mock)</h1>
+  <p class="lead">Order <strong>{{ order_id }}</strong> – {{ "{:,}".format(order.amount) }} ₫</p>
+  <form method="post" action="/mock-momo/{{ order_id }}/confirm">
+    <button class="btn btn-big" type="submit">Confirm payment</button>
+  </form>
+</section>
+{% endblock %}
