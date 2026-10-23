@@ -17,7 +17,9 @@ password_hash = PasswordHash.recommended()
 
 
 class OwnerRegistrationService:
+    """Điều phối tạo và xét duyệt tài khoản chủ quán."""
     def submit(self, data: OwnerRegistrationCreate) -> dict:
+        """Kiểm tra trùng lặp, băm mật khẩu và gửi phiếu đăng ký."""
         values = data.model_dump()
         values.update(
             username=values["username"].strip(),
@@ -39,14 +41,17 @@ class OwnerRegistrationService:
             raise HTTPException(status_code=409, detail="Thông tin đăng ký đã tồn tại hoặc không hợp lệ") from exc
 
     def list_for_admin(self, admin: dict) -> list[dict]:
+        """Liệt kê phiếu đăng ký sau khi kiểm tra quyền admin."""
         self._require_admin(admin)
         return owner_registration_repository.list_all()
 
     def pending_count(self, admin: dict) -> dict:
+        """Đếm phiếu chờ cho sidebar admin."""
         self._require_admin(admin)
         return {"count": owner_registration_repository.count_pending()}
 
     def get_for_admin(self, registration_id: int, admin: dict) -> dict:
+        """Lấy một phiếu đăng ký sau khi kiểm tra quyền admin."""
         self._require_admin(admin)
         item = owner_registration_repository.get_by_id(registration_id)
         if not item:
@@ -55,6 +60,7 @@ class OwnerRegistrationService:
         return item
 
     def decide(self, registration_id: int, decision: int, note: str, admin: dict) -> dict:
+        """Xử lý quyết định và tạo tài khoản nếu phiếu được đồng ý."""
         self._require_admin(admin)
         item = owner_registration_repository.get_by_id(registration_id)
         if not item:
@@ -77,6 +83,7 @@ class OwnerRegistrationService:
         return item
 
     def resend_decision_email(self, registration_id: int, admin: dict) -> dict:
+        """Gửi lại email quyết định cho phiếu đã xử lý."""
         self._require_admin(admin)
         item = owner_registration_repository.get_by_id(registration_id)
         if not item or item["reviewed_at"] is None:
@@ -90,11 +97,13 @@ class OwnerRegistrationService:
 
     @staticmethod
     def _require_admin(admin: dict) -> None:
+        """Bảo đảm chỉ SYSTEM_ADMIN thao tác trên phiếu đăng ký."""
         if admin.get("role") != "SYSTEM_ADMIN":
             raise HTTPException(status_code=403, detail="Bạn không có quyền sử dụng chức năng này")
 
     @staticmethod
     def _send_decision_email(item: dict) -> None:
+        """Gửi email kết quả qua cấu hình SMTP hiện tại."""
         host = os.getenv("SMTP_HOST", "smtp.gmail.com").strip()
         username = os.getenv("SMTP_USERNAME", "").strip()
         # Gmail displays app passwords in groups separated by spaces. Those

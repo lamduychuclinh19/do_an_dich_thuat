@@ -1,3 +1,5 @@
+"""API công khai đọc bản dịch thuyết minh theo POI và ngôn ngữ."""
+
 from typing import Literal
 
 from fastapi import APIRouter
@@ -17,6 +19,7 @@ router = APIRouter(
     response_model=list[TranslationResponse],
 )
 def get_all_translations(poi_id: str):
+    """Trả các bản dịch đang hoạt động của một địa điểm."""
     return translation_service.get_all_translations(
         poi_id,
     )
@@ -36,6 +39,7 @@ def get_translation(
         "ko",
     ],
 ):
+    """Tìm một bản dịch theo địa điểm và mã ngôn ngữ."""
     return translation_service.get_translation(
         poi_id,
         language_code,

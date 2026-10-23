@@ -1,3 +1,5 @@
+"""API công khai trả hướng dẫn phù hợp cho khách tham quan."""
+
 from fastapi import APIRouter, Query
 
 from app.schemas.guide_schema import (

@@ -1,3 +1,5 @@
+// Khung trang dùng chung: thanh điều hướng, menu theo vai trò và nội dung trang.
+// Khung trang dùng chung: thanh điều hướng, menu theo vai trò và nội dung trang.
 import { useEffect, useState } from "react";
 import {
     NavLink,

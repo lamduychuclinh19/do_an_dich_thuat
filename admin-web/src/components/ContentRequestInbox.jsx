@@ -1,3 +1,5 @@
+// Tải, lọc và xử lý danh sách yêu cầu nội dung trong khu vực quản trị.
+// Tải, lọc và xử lý danh sách yêu cầu nội dung trong khu vực quản trị.
 import { useCallback, useEffect, useState } from "react";
 import api from "../services/api";
 import ContentRequestComparison from "./ContentRequestComparison";

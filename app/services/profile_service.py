@@ -22,6 +22,7 @@ class ProfileService:
 
     @staticmethod
     def _ensure_shop_owner(current_person: dict) -> None:
+        """Chặn truy cập hồ sơ nếu tài khoản không phải SHOP_OWNER."""
         if current_person.get("role") != "SHOP_OWNER":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -29,6 +30,7 @@ class ProfileService:
             )
 
     def _get_current_shop_owner(self, current_person: dict) -> dict:
+        """Lấy hồ sơ của chủ quán hiện tại hoặc trả lỗi không tìm thấy."""
         self._ensure_shop_owner(current_person)
         person = people_repository.get_by_id(current_person["id"])
 

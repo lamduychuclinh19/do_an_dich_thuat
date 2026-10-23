@@ -1,9 +1,4 @@
-"""Tạo tài khoản SYSTEM_ADMIN đầu tiên cho MuseumGuideDB_V2.
-
-Đặt file tại thư mục gốc của dự án, cùng cấp với thư mục app,
-sau đó chạy một lần bằng Python trong .venv.
-"""
-
+# Tiện ích tương tác để tạo tài khoản quản trị đầu tiên trong cơ sở dữ liệu.
 import re
 from getpass import getpass
 

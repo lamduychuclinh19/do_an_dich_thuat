@@ -1,3 +1,4 @@
+// Danh sách tài khoản chủ quán dành cho quản trị viên quản lý.
 import { useCallback, useEffect, useState } from "react";
 import api from "../services/api";
 import { formatServerDateTime } from "../utils/dateTime";
@@ -125,6 +126,7 @@ function ShopOwnerPage() {
     }
   };
 
+  // Gọi api đặt lại mật khẩu
   const resetPassword = async (owner) => {
     const confirmed = window.confirm(
       `Đặt lại mật khẩu của "${owner.username}" về abc12345?`

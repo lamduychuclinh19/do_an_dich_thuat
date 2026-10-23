@@ -1,3 +1,4 @@
+// Chuyển đổi thời gian từ máy chủ sang cách hiển thị nhất quán theo giờ Việt Nam.
 const VIETNAM_TIME_ZONE = "Asia/Ho_Chi_Minh";
 
 export function parseServerDate(value) {

@@ -17,6 +17,7 @@ from app.services.admin_management_service import (
 # Tất cả endpoint trong router này chỉ dành cho SYSTEM_ADMIN.
 # Việc kiểm tra được thực hiện ở backend, nên SHOP_OWNER hoặc TOURIST
 # nhập trực tiếp URL cũng vẫn bị chặn với mã 403.
+
 router = APIRouter(
     prefix="/api/admin/shop-owners",
     tags=["SYSTEM ADMIN - Shop owners"],
@@ -87,7 +88,7 @@ def update_shop_owner(
         current_admin=current_admin,
     )
 
-
+# cài lại mật khẩu
 @router.post(
     "/{admin_id}/reset-password",
     response_model=ResetPasswordResponse,

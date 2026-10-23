@@ -1,3 +1,5 @@
+"""Chọn POI gần khách và bản dịch phù hợp để phát thuyết minh."""
+
 from fastapi import HTTPException, status
 
 from app.repositaries.translation_repository import (
@@ -17,6 +19,7 @@ SUPPORTED_LANGUAGE_CODES = {
 
 
 class GuideService:
+    """Kết hợp vị trí, POI, ngôn ngữ, bản dịch và audio."""
     def get_nearby_guide(
         self,
         latitude: float,

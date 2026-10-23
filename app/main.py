@@ -1,3 +1,5 @@
+"""Lắp ráp ứng dụng FastAPI, middleware và các router của hệ thống."""
+
 import edge_tts
 from edge_tts.constants import SEC_MS_GEC_VERSION
 from fastapi import FastAPI
@@ -19,6 +21,9 @@ from app.routers.profile_router import router as profile_router
 from app.routers.public_poi_router import router as public_poi_router
 from app.routers.public_translation_router import (
     router as public_translation_router,
+)
+from app.routers.visitor_analytics_router import (
+    router as visitor_analytics_router,
 )
 from app.services.audio_service import AUDIO_DIRECTORY
 
@@ -51,6 +56,7 @@ app.mount(
 app.include_router(public_poi_router)
 app.include_router(public_translation_router)
 app.include_router(guide_router)
+app.include_router(visitor_analytics_router)
 
 # API xác thực dùng chung cho các loại tài khoản.
 app.include_router(auth_router)

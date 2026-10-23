@@ -1,3 +1,5 @@
+// Cho phép chủ quán xem và cập nhật hồ sơ cá nhân cùng mật khẩu.
+// Cho phép chủ quán xem và cập nhật hồ sơ cá nhân cùng mật khẩu.
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";

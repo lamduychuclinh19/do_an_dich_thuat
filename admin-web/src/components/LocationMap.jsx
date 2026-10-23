@@ -1,3 +1,5 @@
+// Bản đồ dùng chung để chọn tọa độ và xem vị trí địa điểm.
+// Bản đồ dùng chung để chọn tọa độ và xem vị trí địa điểm.
 import { useEffect, useMemo } from "react";
 import {
   Circle,

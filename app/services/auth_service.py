@@ -136,6 +136,7 @@ class AuthService:
         self,
         login_data: AdminLogin,
     ) -> TokenResponse:
+        """Kiểm tra thông tin đăng nhập và tạo JWT cho back-office."""
         return self.login_person(login_data)
 
     def _create_access_token(

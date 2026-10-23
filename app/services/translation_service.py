@@ -453,6 +453,7 @@ class TranslationService:
         text_file: UploadFile,
         owner_id: int,
     ) -> list[dict]:
+        """Đọc TXT tiếng Việt rồi tạo bản dịch và audio cho POI."""
         narration_text = await audio_service.read_text_file(text_file)
         return await self.create_from_vietnamese(
             TranslationSourceCreate(
@@ -568,6 +569,7 @@ class TranslationService:
         owner_id: int,
         title: str | None = None,
     ) -> list[dict]:
+        """Thay nội dung nguồn bằng TXT rồi tạo lại các bản dịch/audio."""
         narration_text = await audio_service.read_text_file(text_file)
         return await self.update_vietnamese_source(
             poi_id=poi_id,

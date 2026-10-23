@@ -1,3 +1,5 @@
+// Hộp thoại chỉ đọc thông tin địa điểm và vị trí trên bản đồ.
+// Hộp thoại chỉ đọc thông tin địa điểm và vị trí trên bản đồ.
 import LocationMap from "./LocationMap";
 import "./PoiDetailsModal.css";
 

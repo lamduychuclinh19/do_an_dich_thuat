@@ -1,3 +1,4 @@
+// Lưu phiên đăng nhập và cung cấp thông tin vai trò cho giao diện.
 const TOKEN_KEY = "access_token";
 
 // Frontend chỉ đọc payload JWT để quyết định cách hiển thị giao diện.

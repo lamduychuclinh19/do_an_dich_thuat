@@ -1,3 +1,5 @@
+// Biểu mẫu đăng ký tài khoản dành cho chủ quán.
+// Biểu mẫu đăng ký tài khoản dành cho chủ quán.
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";

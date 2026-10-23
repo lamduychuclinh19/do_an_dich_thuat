@@ -1,3 +1,4 @@
+// Danh sách bản dịch và thao tác tạo, sửa hoặc quản lý audio thuyết minh.
 import { useEffect, useState } from "react";
 import api from "../services/api";
 import "./TranslationPage.css";

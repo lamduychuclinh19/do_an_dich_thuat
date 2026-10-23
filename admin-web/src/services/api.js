@@ -1,3 +1,4 @@
+// Cấu hình Axios chung, tự gắn access token và xử lý phiên hết hạn.
 import axios from "axios";
 import {
   clearSession,

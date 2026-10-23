@@ -1,3 +1,5 @@
+// Trang quản trị xét duyệt yêu cầu tạo hoặc cập nhật địa điểm.
+// Trang quản trị xét duyệt yêu cầu tạo hoặc cập nhật địa điểm.
 import ContentRequestInbox from "../components/ContentRequestInbox";
 import "./ApprovalPages.css";
 

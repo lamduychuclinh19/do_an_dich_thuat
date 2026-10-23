@@ -579,9 +579,11 @@ class PeopleRepository:
     # Các tên dưới đây giữ backend hiện tại hoạt động trong lúc đổi dần từ
     # "admin" sang "people". Sau khi sửa hết service/router có thể xóa chúng.
     def get_all(self, phone_keyword=None, is_active=None):
+        """Giữ API truy vấn tên cũ để tương thích với service đang chuyển đổi."""
         return self.get_all_shop_owners(phone_keyword, is_active)
 
     def create_staff(self, data, password_hash, created_by_admin_id):
+        """Giữ API tạo nhân viên cũ và chuyển sang tạo chủ quán."""
         return self.create_shop_owner(
             data,
             password_hash,
@@ -589,9 +591,11 @@ class PeopleRepository:
         )
 
     def update_staff(self, admin_id, data):
+        """Giữ API cập nhật tài khoản cũ và chuyển sang thao tác mới."""
         return self.update_shop_owner(admin_id, data)
 
     def reset_staff_password(self, admin_id, password_hash):
+        """Giữ API đặt lại mật khẩu cũ để các caller hiện tại không bị gãy."""
         return self.reset_shop_owner_password(admin_id, password_hash)
 
 

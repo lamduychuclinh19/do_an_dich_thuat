@@ -39,6 +39,7 @@ class ShopOwnerProfileUpdate(BaseModel):
     @field_validator("phone")
     @classmethod
     def validate_vietnam_mobile_prefix(cls, value: str) -> str:
+        """Kiểm tra đầu số di động Việt Nam trên dữ liệu hồ sơ."""
         valid_prefixes = {
             "032", "033", "034", "035", "036", "037", "038", "039",
             "052", "055", "056", "058", "059",
@@ -60,4 +61,5 @@ class ChangePasswordRequest(BaseModel):
 
 
 class ProfileMessageResponse(BaseModel):
+    """Định dạng thông báo kết quả cập nhật hồ sơ."""
     message: str

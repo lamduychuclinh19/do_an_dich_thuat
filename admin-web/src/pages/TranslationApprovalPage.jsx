@@ -1,3 +1,4 @@
+// Trang quản trị xử lý yêu cầu cập nhật bản dịch từ chủ quán.
 import ContentRequestInbox from "../components/ContentRequestInbox";
 import "./ApprovalPages.css";
 

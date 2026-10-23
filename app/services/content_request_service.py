@@ -1,3 +1,5 @@
+"""Điều phối yêu cầu POI và luồng admin duyệt hoặc từ chối."""
+
 from fastapi import HTTPException
 
 from app.repositaries.content_request_repository import content_request_repository
@@ -10,7 +12,9 @@ from app.services.translation_service import translation_service
 
 
 class ContentRequestService:
+    """Áp dụng nghiệp vụ gửi và kiểm duyệt yêu cầu nội dung."""
     def submit(self, data: ContentRequestCreate, owner: dict) -> dict:
+        """Kiểm tra quyền, snapshot dữ liệu cũ và lưu yêu cầu mới."""
         if owner.get("role") != "SHOP_OWNER":
             raise HTTPException(status_code=403, detail="Chỉ Chủ địa điểm mới được gửi yêu cầu thay đổi nội dung")
         details = dict(data.details)
@@ -86,12 +90,14 @@ class ContentRequestService:
         )
 
     def list_admin(self, request_type: str, admin: dict) -> list[dict]:
+        """Cho admin xem các yêu cầu theo loại đã chọn."""
         self._require_admin(admin)
         if request_type not in {"POI", "TRANSLATION"}:
             raise HTTPException(status_code=422, detail="Loại yêu cầu không hợp lệ")
         return content_request_repository.list_for_admin(request_type)
 
     def get_admin(self, request_id: int, admin: dict) -> dict:
+        """Trả chi tiết yêu cầu cho admin và bổ sung snapshot cũ khi cần."""
         self._require_admin(admin)
         item = content_request_repository.get(request_id)
         if not item:
@@ -100,6 +106,7 @@ class ContentRequestService:
         return item
 
     async def decide(self, request_id: int, approved: bool, note: str, admin: dict) -> dict:
+        """Claim yêu cầu, áp dụng thay đổi nếu duyệt và lưu ghi chú."""
         self._require_admin(admin)
         normalized_note = note.strip()
         if not normalized_note:
@@ -140,10 +147,12 @@ class ContentRequestService:
 
     @staticmethod
     def _require_admin(person: dict) -> None:
+        """Chặn thao tác kiểm duyệt nếu người gọi không phải SYSTEM_ADMIN."""
         if person.get("role") != "SYSTEM_ADMIN":
             raise HTTPException(status_code=403, detail="Chỉ SYSTEM_ADMIN được xử lý yêu cầu")
 
     def owner_requests(self, owner: dict) -> list[dict]:
+        """Trả lịch sử yêu cầu của đúng chủ quán đang đăng nhập."""
         if owner.get("role") != "SHOP_OWNER":
             raise HTTPException(status_code=403, detail="Chức năng chỉ dành cho Chủ địa điểm")
         items = content_request_repository.list_for_owner(owner["id"])
@@ -191,11 +200,13 @@ class ContentRequestService:
             }
 
     def owner_notifications(self, owner: dict) -> list[dict]:
+        """Trả thông báo kiểm duyệt thuộc chủ quán hiện tại."""
         if owner.get("role") != "SHOP_OWNER":
             raise HTTPException(status_code=403, detail="Chức năng chỉ dành cho Chủ địa điểm")
         return content_request_repository.notifications(owner["id"])
 
     def mark_notification_read(self, notification_id: int, owner: dict) -> None:
+        """Đánh dấu thông báo đã đọc trong phạm vi chủ quán hiện tại."""
         if owner.get("role") != "SHOP_OWNER":
             raise HTTPException(status_code=403, detail="Chức năng chỉ dành cho Chủ địa điểm")
         if not content_request_repository.mark_notification_read(owner["id"], notification_id):

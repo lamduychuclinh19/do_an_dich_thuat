@@ -1,3 +1,5 @@
+"""Schema cho tài khoản chủ quán và quản trị viên."""
+
 from datetime import datetime
 from typing import Literal
 

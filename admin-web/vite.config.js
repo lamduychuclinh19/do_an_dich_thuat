@@ -1,3 +1,4 @@
+// Cấu hình Vite cho ứng dụng React, truy cập mạng và proxy API tới backend.
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 

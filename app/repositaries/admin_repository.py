@@ -1,9 +1,12 @@
+"""Truy vấn SQL Server cho tài khoản quản trị và dữ liệu tương thích cũ."""
+
 from sqlalchemy import text
 
 from app.database import engine
 
 
 class AdminRepository:
+    """Thực hiện thao tác SQL cho tài khoản quản trị."""
     def _convert_row_to_dict(
         self,
         row,
@@ -486,6 +489,7 @@ class AdminRepository:
         phone_keyword: str | None = None,
         is_active: bool | None = None,
     ) -> list[dict]:
+        """Lấy các tài khoản quản trị theo phương thức tương thích cũ."""
         return self.get_all_shop_owners(
             phone_keyword=phone_keyword,
             is_active=is_active,
@@ -497,6 +501,7 @@ class AdminRepository:
         password_hash: str,
         created_by_admin_id: int,
     ) -> dict:
+        """Tạo tài khoản nhân viên bằng dữ liệu đã được service chuẩn hóa."""
         return self.create_shop_owner(
             data=data,
             password_hash=password_hash,
@@ -510,6 +515,7 @@ class AdminRepository:
         admin_id: int,
         data: dict,
     ) -> dict | None:
+        """Cập nhật thông tin của một tài khoản nhân viên theo ID."""
         return self.update_shop_owner(
             admin_id=admin_id,
             data=data,
@@ -520,6 +526,7 @@ class AdminRepository:
         admin_id: int,
         password_hash: str,
     ) -> bool:
+        """Ghi hash mật khẩu mới vào tài khoản nhân viên."""
         return self.reset_shop_owner_password(
             admin_id=admin_id,
             password_hash=password_hash,

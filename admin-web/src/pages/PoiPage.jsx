@@ -1,3 +1,5 @@
+// Danh sách địa điểm, bộ lọc và thao tác quản lý theo quyền người dùng.
+// Danh sách địa điểm, bộ lọc và thao tác quản lý theo quyền người dùng.
 import { useCallback, useEffect, useState } from "react";
 import api from "../services/api";
 import "./PoiPage.css";

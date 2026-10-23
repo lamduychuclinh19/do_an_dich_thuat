@@ -42,6 +42,7 @@ def _require_roles(*allowed_roles: str) -> Callable:
     def role_checker(
         current_person: dict = Depends(get_current_person),
     ) -> dict:
+        """Từ chối request nếu vai trò hiện tại không nằm trong danh sách."""
         if current_person["role"] not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

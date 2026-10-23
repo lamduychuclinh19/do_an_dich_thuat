@@ -1,3 +1,5 @@
+"""Tạo và quản lý audio thuyết minh bằng Edge TTS."""
+
 import asyncio
 import logging
 from pathlib import Path
@@ -52,6 +54,8 @@ FALLBACK_VOICES_BY_LANGUAGE = {
 
 
 class AudioService:
+    """Chia nhỏ văn bản, sinh audio TTS và dọn file tạm đã tạo."""
+
     @staticmethod
     def _split_text(text: str, max_characters: int) -> list[str]:
         """Chia văn bản ở ranh giới câu/từ để dịch vụ TTS xử lý ổn định hơn."""
@@ -91,6 +95,7 @@ class AudioService:
         voice: str,
         destination: Path,
     ) -> None:
+        """Tạo một lần đọc audio và xác nhận dịch vụ trả về dữ liệu hợp lệ."""
         communicate = edge_tts.Communicate(
             text=text,
             voice=voice,

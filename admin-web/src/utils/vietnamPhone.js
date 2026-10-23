@@ -1,3 +1,4 @@
+// Kiểm tra số điện thoại di động theo các đầu số đang dùng tại Việt Nam.
 const VIETNAM_MOBILE_PREFIXES = new Set([
   "032", "033", "034", "035", "036", "037", "038", "039",
   "052", "055", "056", "058", "059",

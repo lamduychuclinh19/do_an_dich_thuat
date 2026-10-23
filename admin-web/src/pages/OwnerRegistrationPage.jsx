@@ -1,3 +1,5 @@
+// Danh sách đăng ký chủ quán để quản trị viên xem xét và phản hồi.
+// Danh sách đăng ký chủ quán để quản trị viên xem xét và phản hồi.
 import { useCallback, useEffect, useState } from "react";
 import api from "../services/api";
 import { formatServerDateTime, parseServerDate } from "../utils/dateTime";

@@ -23,6 +23,7 @@ class TranslationRepository:
 
     @staticmethod
     def _row_to_dict(row) -> dict | None:
+        """Chuyển một hàng SQLAlchemy thành dict và chuẩn hóa kiểu dữ liệu."""
         if row is None:
             return None
 

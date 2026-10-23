@@ -1,3 +1,5 @@
+"""Schema dữ liệu địa điểm, tọa độ và phạm vi kích hoạt."""
+
 from pydantic import BaseModel, Field
 
 

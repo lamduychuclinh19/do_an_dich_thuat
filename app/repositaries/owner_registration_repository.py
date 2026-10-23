@@ -6,7 +6,9 @@ from app.database import engine
 
 
 class OwnerRegistrationRepository:
+    """Truy vấn phiếu đăng ký chủ quán và hoàn tất quyết định admin."""
     def create(self, data: dict) -> dict:
+        """Lưu một phiếu đăng ký mới ở trạng thái chờ xét duyệt."""
         query = text("""
             INSERT INTO dbo.poi_owner_registrations
                 (username, password_hash, full_name, phone, email)
@@ -20,6 +22,7 @@ class OwnerRegistrationRepository:
         return dict(row)
 
     def list_all(self) -> list[dict]:
+        """Đọc danh sách phiếu đăng ký cùng thông tin xử lý."""
         query = text("""
             SELECT id, username, full_name, phone, email, created_at,
                    reviewed_at, status, admin_note
@@ -32,6 +35,7 @@ class OwnerRegistrationRepository:
             return [dict(row) for row in connection.execute(query).mappings()]
 
     def count_pending(self) -> int:
+        """Đếm số phiếu đăng ký chưa được admin xử lý."""
         query = text("""
             SELECT COUNT(*)
             FROM dbo.poi_owner_registrations
@@ -41,6 +45,7 @@ class OwnerRegistrationRepository:
             return int(connection.execute(query).scalar_one())
 
     def get_by_id(self, registration_id: int) -> dict | None:
+        """Lấy một phiếu đăng ký theo mã phiếu."""
         query = text("""
             SELECT id, username, password_hash, full_name, phone, email,
                    created_at, reviewed_at, status, admin_note

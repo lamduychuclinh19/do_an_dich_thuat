@@ -1,3 +1,5 @@
+// Điểm khởi chạy React: gắn ứng dụng vào phần tử root của trang HTML.
+// Điểm khởi chạy React: gắn ứng dụng vào phần tử root của trang HTML.
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'

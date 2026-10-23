@@ -259,6 +259,7 @@ class PoiService:
 
     # Giữ tên cũ để nơi khác chưa kịp đổi vẫn có thể gọi service.
     def get_all_pois_for_admin(self, owner_id: int) -> list[dict]:
+        """Tên tương thích cũ cho danh sách POI theo một owner ID."""
         return self.get_all_pois_for_owner(owner_id)
 
     @staticmethod

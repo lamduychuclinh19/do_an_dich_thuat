@@ -1,3 +1,5 @@
+"""Endpoint đăng nhập và gửi phiếu đăng ký tài khoản chủ quán."""
+
 from fastapi import APIRouter
 
 from app.schemas.auth_schema import AdminLogin, TokenResponse
@@ -14,6 +16,7 @@ router = APIRouter(
 
 @router.post("/login", response_model=TokenResponse)
 def login_admin(login_data: AdminLogin) -> TokenResponse:
+    """Xác thực tài khoản back-office và trả token truy cập."""
     return auth_service.login_admin(login_data)
 
 
