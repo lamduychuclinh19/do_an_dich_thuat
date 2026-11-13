@@ -16,7 +16,7 @@ router = APIRouter(
     "/poi/{poi_id}",
     response_model=list[TranslationResponse],
 )
-def get_all_translations(poi_id: int):
+def get_all_translations(poi_id: str):
     return translation_service.get_all_translations(
         poi_id,
     )
@@ -27,7 +27,7 @@ def get_all_translations(poi_id: int):
     response_model=TranslationResponse,
 )
 def get_translation(
-    poi_id: int,
+    poi_id: str,
     language_code: Literal[
         "vi",
         "en",

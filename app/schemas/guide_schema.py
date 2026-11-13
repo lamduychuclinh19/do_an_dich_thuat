@@ -13,7 +13,7 @@ LanguageCode = Literal[
 
 
 class NearbyGuideResponse(BaseModel):
-    poi_id: int
+    poi_id: str
     poi_name: str
     address: str
 
@@ -29,7 +29,7 @@ class NearbyGuideResponse(BaseModel):
 
 
 class GuideItemResponse(BaseModel):
-    poi_id: int
+    poi_id: str
     poi_name: str
     address: str
 

@@ -22,5 +22,5 @@ def get_all_pois():
     "/{poi_id}",
     response_model=PoiResponse,
 )
-def get_poi_by_id(poi_id: int):
+def get_poi_by_id(poi_id: str):
     return poi_service.get_poi_by_id(poi_id)

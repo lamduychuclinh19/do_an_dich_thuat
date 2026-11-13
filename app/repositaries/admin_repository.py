@@ -163,13 +163,16 @@ class AdminRepository:
 
         return self._convert_row_to_dict(row)
 
-    def get_all(
+    def get_all_shop_owners(
         self,
         phone_keyword: str | None = None,
         is_active: bool | None = None,
     ) -> list[dict]:
         """
-        Lấy danh sách quản trị viên.
+        Lấy danh sách tài khoản chủ quán.
+
+        Màn hình quản lý tài khoản chỉ quản lý SHOP_OWNER,
+        vì vậy SYSTEM_ADMIN không bao giờ xuất hiện trong kết quả.
 
         phone_keyword:
             Tìm kiếm gần đúng theo số điện thoại.
@@ -179,7 +182,7 @@ class AdminRepository:
             True  -> chỉ tài khoản hoạt động.
             False -> chỉ tài khoản đã khóa.
         """
-        conditions = []
+        conditions = ["role = 'SHOP_OWNER'"]
         parameters = {}
 
         if phone_keyword:
@@ -219,12 +222,7 @@ class AdminRepository:
                 created_at
             FROM dbo.admins
             {where_clause}
-            ORDER BY
-                CASE
-                    WHEN role = 'OWNER' THEN 0
-                    ELSE 1
-                END,
-                id
+            ORDER BY id DESC
             """
         )
 
@@ -239,17 +237,17 @@ class AdminRepository:
             for row in rows
         ]
 
-    def create_staff(
+    def create_shop_owner(
         self,
         data: dict,
         password_hash: str,
-        created_by_admin_id: int,
+        created_by_system_admin_id: int,
     ) -> dict:
         """
-        Tạo tài khoản nhân viên mới.
+        Tạo tài khoản chủ quán mới.
 
-        Role luôn được backend đặt là STAFF.
-        Không lấy role từ dữ liệu frontend gửi lên.
+        Role luôn do backend đặt là SHOP_OWNER, không lấy role
+        từ frontend để tránh người dùng tự nâng quyền.
         """
         query = text(
             """
@@ -284,7 +282,7 @@ class AdminRepository:
                 :full_name,
                 :phone,
                 :email,
-                'STAFF',
+                'SHOP_OWNER',
                 1,
                 1,
                 :created_by_admin_id
@@ -296,7 +294,7 @@ class AdminRepository:
             **data,
             "password_hash": password_hash,
             "created_by_admin_id": (
-                created_by_admin_id
+                created_by_system_admin_id
             ),
         }
 
@@ -308,19 +306,19 @@ class AdminRepository:
 
         return self._convert_row_to_dict(row)
 
-    def update_staff(
+    def update_shop_owner(
         self,
         admin_id: int,
         data: dict,
     ) -> dict | None:
         """
-        Sửa thông tin nhân viên.
+        Sửa thông tin chủ quán.
 
         is_active nằm trong data của chức năng sửa,
         không có repository bật/tắt trạng thái riêng.
 
-        WHERE role = 'STAFF' giúp bảo vệ tài khoản OWNER,
-        kể cả khi service vô tình truyền ID của chủ quán.
+        Điều kiện role = SHOP_OWNER bảo vệ tài khoản
+        SYSTEM_ADMIN ngay cả khi service truyền nhầm ID.
         """
         allowed_fields = {
             "full_name",
@@ -360,7 +358,7 @@ class AdminRepository:
                 INSERTED.created_by_admin_id,
                 INSERTED.created_at
             WHERE id = :admin_id
-              AND role = 'STAFF'
+              AND role = 'SHOP_OWNER'
             """
         )
 
@@ -377,16 +375,16 @@ class AdminRepository:
 
         return self._convert_row_to_dict(row)
 
-    def reset_staff_password(
+    def reset_shop_owner_password(
         self,
         admin_id: int,
         password_hash: str,
     ) -> bool:
         """
-        Đặt lại mật khẩu nhân viên.
+        Đặt lại mật khẩu chủ quán về mật khẩu mặc định.
 
-        Chỉ cập nhật STAFF, không cho API quản lý nhân sự
-        đặt lại mật khẩu của OWNER.
+        Chỉ cập nhật SHOP_OWNER, không cho API quản lý tài khoản
+        đặt lại mật khẩu của SYSTEM_ADMIN.
         """
         query = text(
             """
@@ -395,7 +393,7 @@ class AdminRepository:
                 password_hash = :password_hash,
                 must_change_password = 1
             WHERE id = :admin_id
-              AND role = 'STAFF'
+              AND role = 'SHOP_OWNER'
             """
         )
 
@@ -441,8 +439,8 @@ class AdminRepository:
         """
         Giữ lại hàm cũ để không làm hỏng code đã sử dụng nó.
 
-        Các tài khoản nhân viên mới phải được tạo bằng
-        create_staff(), không dùng hàm này.
+        Tài khoản chủ quán đầy đủ phải được tạo bằng
+        create_shop_owner(), không dùng hàm này cho code mới.
         """
         query = text(
             """
@@ -465,7 +463,7 @@ class AdminRepository:
             (
                 :username,
                 :password_hash,
-                'STAFF',
+                'SHOP_OWNER',
                 1,
                 1
             )
@@ -482,6 +480,50 @@ class AdminRepository:
             ).mappings().one()
 
         return self._convert_row_to_dict(row)
+
+    def get_all(
+        self,
+        phone_keyword: str | None = None,
+        is_active: bool | None = None,
+    ) -> list[dict]:
+        return self.get_all_shop_owners(
+            phone_keyword=phone_keyword,
+            is_active=is_active,
+        )
+
+    def create_staff(
+        self,
+        data: dict,
+        password_hash: str,
+        created_by_admin_id: int,
+    ) -> dict:
+        return self.create_shop_owner(
+            data=data,
+            password_hash=password_hash,
+            created_by_system_admin_id=(
+                created_by_admin_id
+            ),
+        )
+
+    def update_staff(
+        self,
+        admin_id: int,
+        data: dict,
+    ) -> dict | None:
+        return self.update_shop_owner(
+            admin_id=admin_id,
+            data=data,
+        )
+
+    def reset_staff_password(
+        self,
+        admin_id: int,
+        password_hash: str,
+    ) -> bool:
+        return self.reset_shop_owner_password(
+            admin_id=admin_id,
+            password_hash=password_hash,
+        )
 
 
 admin_repository = AdminRepository()
