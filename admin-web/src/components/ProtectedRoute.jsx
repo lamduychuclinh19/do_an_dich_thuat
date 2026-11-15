@@ -1,3 +1,5 @@
+// Chặn trang theo trạng thái đăng nhập và danh sách vai trò được phép.
+// Chặn trang theo trạng thái đăng nhập và danh sách vai trò được phép.
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { getSession, isBackOfficeRole } from "../services/auth";
 

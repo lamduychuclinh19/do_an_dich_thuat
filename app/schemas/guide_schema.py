@@ -1,3 +1,5 @@
+"""Cấu trúc phản hồi của API hướng dẫn khách và mã ngôn ngữ hỗ trợ."""
+
 from typing import Literal
 
 from pydantic import BaseModel
@@ -13,6 +15,7 @@ LanguageCode = Literal[
 
 
 class NearbyGuideResponse(BaseModel):
+    """Định dạng hướng dẫn cho POI gần tọa độ khách."""
     poi_id: str
     poi_name: str
     address: str
@@ -29,6 +32,7 @@ class NearbyGuideResponse(BaseModel):
 
 
 class GuideItemResponse(BaseModel):
+    """Định dạng một mục hướng dẫn trong danh sách POI công khai."""
     poi_id: str
     poi_name: str
     address: str

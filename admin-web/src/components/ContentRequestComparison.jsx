@@ -1,3 +1,5 @@
+// Hiển thị song song dữ liệu hiện tại và nội dung được gửi trong yêu cầu thay đổi.
+// Hiển thị song song dữ liệu hiện tại và nội dung được gửi trong yêu cầu thay đổi.
 import "./ContentRequestComparison.css";
 import LocationMap from "./LocationMap";
 
@@ -82,7 +84,7 @@ export default function ContentRequestComparison({
   if (!isUpdate) {
     return (
       <section className="request-comparison request-comparison-create">
-        <h3>Nội dung chủ quán gửi</h3>
+        <h3>Nội dung Chủ địa điểm gửi</h3>
         {renderFields(details, "new")}
         {renderLocation(details, "Vị trí địa điểm được đề xuất")}
       </section>

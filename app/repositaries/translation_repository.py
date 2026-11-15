@@ -6,7 +6,7 @@ from app.database import engine
 
 
 class TranslationRepository:
-    """Truy cập nội dung thuyết minh và cô lập dữ liệu giữa các chủ quán."""
+    """Truy cập nội dung thuyết minh và cô lập dữ liệu giữa các Chủ địa điểm."""
 
     SELECT_COLUMNS = """
         translation.id,
@@ -23,6 +23,7 @@ class TranslationRepository:
 
     @staticmethod
     def _row_to_dict(row) -> dict | None:
+        """Chuyển một hàng SQLAlchemy thành dict và chuẩn hóa kiểu dữ liệu."""
         if row is None:
             return None
 
@@ -636,7 +637,7 @@ class TranslationRepository:
         owner_id: int,
         is_active: bool,
     ) -> dict | None:
-        """Ẩn/hiện bản dịch thuộc đúng chủ quán, không xóa dữ liệu/audio."""
+        """Ẩn/hiện bản dịch thuộc đúng Chủ địa điểm, không xóa dữ liệu/audio."""
         query = text(
             f"""
             SET NOCOUNT ON;

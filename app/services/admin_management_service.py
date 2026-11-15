@@ -33,7 +33,7 @@ class AdminManagementService:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=(
                     "Chỉ quản trị hệ thống mới được quản lý "
-                    "tài khoản chủ địa điểm"
+                    "tài khoản Chủ địa điểm"
                 ),
             )
 
@@ -52,7 +52,7 @@ class AdminManagementService:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=(
                     "Chức năng này chỉ được tác động đến "
-                    "tài khoản chủ địa điểm"
+                    "tài khoản Chủ địa điểm"
                 ),
             )
 
@@ -261,7 +261,7 @@ class AdminManagementService:
         if updated is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Không tìm thấy chủ địa điểm",
+                detail="Không tìm thấy Chủ địa điểm",
             )
 
         return updated
@@ -287,7 +287,7 @@ class AdminManagementService:
         if not was_updated:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Không tìm thấy chủ địa điểm",
+                detail="Không tìm thấy Chủ địa điểm",
             )
 
         return ResetPasswordResponse(
@@ -301,6 +301,7 @@ class AdminManagementService:
         phone_keyword: str | None = None,
         is_active: bool | None = None,
     ) -> list[dict]:
+        """Tên tương thích cũ cho chức năng liệt kê chủ quán."""
         return self.get_all_shop_owners(
             current_admin=current_admin,
             phone_keyword=phone_keyword,
@@ -308,6 +309,7 @@ class AdminManagementService:
         )
 
     def get_admin_by_id(self, admin_id: int, current_admin: dict) -> dict:
+        """Tên tương thích cũ cho việc tìm tài khoản theo ID."""
         return self.get_shop_owner_by_id(admin_id, current_admin)
 
     def create_staff(
@@ -315,6 +317,7 @@ class AdminManagementService:
         data: ShopOwnerCreate,
         current_admin: dict,
     ) -> dict:
+        """Tên tương thích cũ cho việc cấp tài khoản chủ quán."""
         return self.create_shop_owner(data, current_admin)
 
     def update_staff(
@@ -323,6 +326,7 @@ class AdminManagementService:
         data: ShopOwnerUpdate,
         current_admin: dict,
     ) -> dict:
+        """Tên tương thích cũ cho việc sửa thông tin chủ quán."""
         return self.update_shop_owner(admin_id, data, current_admin)
 
     def reset_staff_password(
@@ -330,6 +334,7 @@ class AdminManagementService:
         admin_id: int,
         current_admin: dict,
     ) -> ResetPasswordResponse:
+        """Tên tương thích cũ cho việc đặt lại mật khẩu chủ quán."""
         return self.reset_shop_owner_password(admin_id, current_admin)
 
 

@@ -1,3 +1,5 @@
+// Khai báo các tuyến đường công khai và các trang được bảo vệ theo vai trò.
+// Khai báo các tuyến đường công khai và các trang được bảo vệ theo vai trò.
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminLayout from "./layouts/AdminLayout";

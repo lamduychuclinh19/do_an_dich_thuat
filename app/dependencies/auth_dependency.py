@@ -42,6 +42,7 @@ def _require_roles(*allowed_roles: str) -> Callable:
     def role_checker(
         current_person: dict = Depends(get_current_person),
     ) -> dict:
+        """Từ chối request nếu vai trò hiện tại không nằm trong danh sách."""
         if current_person["role"] not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -53,10 +54,10 @@ def _require_roles(*allowed_roles: str) -> Callable:
     return role_checker
 
 
-# Chỉ quản trị viên hệ thống được quản lý danh sách chủ địa điểm.
+# Chỉ quản trị viên hệ thống được quản lý danh sách Chủ địa điểm.
 require_system_admin = _require_roles("SYSTEM_ADMIN")
 
-# Chỉ chủ địa điểm được quản lý POI, nội dung dịch và tạo audio.
+# Chỉ Chủ địa điểm được quản lý POI, nội dung dịch và tạo audio.
 require_shop_owner = _require_roles("SHOP_OWNER")
 
 # Chỉ tài khoản khách du lịch đang hoạt động được qua dependency này.

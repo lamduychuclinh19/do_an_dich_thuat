@@ -58,6 +58,7 @@ class TranslationUpdate(BaseModel):
 
 
 class TranslationResponse(BaseModel):
+    """Định dạng bản dịch và đường dẫn audio trả về client."""
     id: int
     poi_id: str
     language_code: LanguageCode
@@ -69,4 +70,5 @@ class TranslationResponse(BaseModel):
 
 
 class TranslationVisibility(BaseModel):
+    """Nhận trạng thái bật hoặc ẩn của một bản dịch."""
     is_active: bool

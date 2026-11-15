@@ -1,3 +1,5 @@
+"""API công khai đọc các địa điểm đang được hiển thị."""
+
 from fastapi import APIRouter
 
 from app.schemas.poi_schema import PoiResponse
@@ -15,6 +17,7 @@ router = APIRouter(
     response_model=list[PoiResponse],
 )
 def get_all_pois():
+    """Trả các địa điểm đang công khai cho khách tham quan."""
     return poi_service.get_all_pois()
 
 
@@ -23,4 +26,5 @@ def get_all_pois():
     response_model=PoiResponse,
 )
 def get_poi_by_id(poi_id: str):
+    """Tìm một địa điểm công khai theo mã POI."""
     return poi_service.get_poi_by_id(poi_id)

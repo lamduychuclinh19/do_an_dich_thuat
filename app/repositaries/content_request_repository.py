@@ -6,7 +6,9 @@ from app.database import engine
 
 
 class ContentRequestRepository:
+    """Lưu yêu cầu nội dung, snapshot so sánh và kết quả kiểm duyệt."""
     def has_pending(self, request_type: str, key: str) -> bool:
+        """Kiểm tra POI đã có yêu cầu cùng loại đang chờ hay đang xử lý chưa."""
         if request_type == "POI":
             query = text("""
                 SELECT CASE WHEN EXISTS (
@@ -30,6 +32,7 @@ class ContentRequestRepository:
 
     def create(self, *, request_type: str, action: str, submitter_id: int,
                details: dict, previous_details: dict | None = None) -> dict:
+        """Tạo yêu cầu và lưu dữ liệu mới cùng snapshot nội dung cũ."""
         previous_details = previous_details or {}
         with engine.begin() as connection:
             request_id = connection.execute(text("""
@@ -84,6 +87,7 @@ class ContentRequestRepository:
 
     @staticmethod
     def _base_select() -> str:
+        """Tạo câu SELECT dùng chung cho danh sách và chi tiết yêu cầu."""
         return """
             SELECT r.id, r.request_type, r.action, r.submitted_by_person_id,
                    p.username AS submitted_by_username, p.full_name AS submitter_name,
@@ -95,6 +99,7 @@ class ContentRequestRepository:
         """
 
     def get(self, request_id: int) -> dict | None:
+        """Đọc một yêu cầu theo ID cùng dữ liệu chi tiết liên quan."""
         with engine.connect() as connection:
             row = connection.execute(text(self._base_select() + " WHERE r.id=:id"), {"id": request_id}).mappings().first()
             if not row:
@@ -129,10 +134,12 @@ class ContentRequestRepository:
 
     @staticmethod
     def _previous_details(row, keys: tuple[str, ...]) -> dict | None:
+        """Chuyển các cột snapshot trước khi sửa thành object cho API."""
         previous = {key: row.get(f"previous_{key}") for key in keys}
         return previous if any(value is not None for value in previous.values()) else None
 
     def list_for_admin(self, request_type: str) -> list[dict]:
+        """Lấy danh sách yêu cầu theo loại để admin xử lý."""
         if request_type == "POI":
             query = self._base_select() + """
                 LEFT JOIN dbo.poi_change_request_details d ON d.request_id=r.id
@@ -160,6 +167,7 @@ class ContentRequestRepository:
         return [dict(row) for row in ids]
 
     def list_for_owner(self, owner_id: int) -> list[dict]:
+        """Lấy lịch sử yêu cầu do một chủ quán gửi."""
         with engine.connect() as connection:
             rows = connection.execute(text("""
                 SELECT r.id, r.request_type, r.action, r.submitted_by_person_id,
@@ -222,6 +230,7 @@ class ContentRequestRepository:
         return items
 
     def claim(self, request_id: int) -> dict | None:
+        """Nhận xử lý yêu cầu một cách nguyên tử để tránh hai admin duyệt cùng lúc."""
         with engine.begin() as connection:
             row = connection.execute(text("""
                 UPDATE dbo.content_change_requests WITH (ROWLOCK)
@@ -233,6 +242,7 @@ class ContentRequestRepository:
         return self.get(request_id) if row else None
 
     def release(self, request_id: int) -> None:
+        """Trả yêu cầu về trạng thái chờ nếu quá trình xử lý thất bại."""
         with engine.begin() as connection:
             connection.execute(text("""
                 UPDATE dbo.content_change_requests
@@ -240,6 +250,7 @@ class ContentRequestRepository:
             """), {"id": request_id})
 
     def finalize(self, request: dict, admin_id: int, approved: bool, note: str) -> None:
+        """Ghi trạng thái cuối, admin xử lý, ghi chú và thời gian kiểm duyệt."""
         status_value = "APPROVED" if approved else "REJECTED"
         action = "tạo mới" if request["action"] == "CREATE" else "cập nhật"
         subject = "địa điểm" if request["request_type"] == "POI" else "bản dịch"
@@ -269,6 +280,7 @@ class ContentRequestRepository:
                   "message": message})
 
     def notifications(self, owner_id: int) -> list[dict]:
+        """Lấy các thông báo thuộc về một chủ quán."""
         with engine.connect() as connection:
             rows = connection.execute(text("""
                 SELECT id, notification_type, message, created_at, is_read
@@ -279,6 +291,7 @@ class ContentRequestRepository:
         return [dict(row) for row in rows]
 
     def mark_notification_read(self, owner_id: int, notification_id: int) -> bool:
+        """Đánh dấu đã đọc sau khi xác nhận thông báo thuộc chủ quán."""
         with engine.begin() as connection:
             result = connection.execute(text("""
                 UPDATE dbo.owner_notifications SET is_read=1

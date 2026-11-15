@@ -22,20 +22,22 @@ class ProfileService:
 
     @staticmethod
     def _ensure_shop_owner(current_person: dict) -> None:
+        """Chặn truy cập hồ sơ nếu tài khoản không phải SHOP_OWNER."""
         if current_person.get("role") != "SHOP_OWNER":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Chức năng này chỉ dành cho chủ quán",
+                detail="Chức năng này chỉ dành cho Chủ địa điểm",
             )
 
     def _get_current_shop_owner(self, current_person: dict) -> dict:
+        """Lấy hồ sơ của chủ quán hiện tại hoặc trả lỗi không tìm thấy."""
         self._ensure_shop_owner(current_person)
         person = people_repository.get_by_id(current_person["id"])
 
         if person is None or person["role"] != "SHOP_OWNER":
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Không tìm thấy tài khoản chủ quán",
+                detail="Không tìm thấy tài khoản Chủ địa điểm",
             )
 
         return person
@@ -96,7 +98,7 @@ class ProfileService:
         if updated is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Không tìm thấy tài khoản chủ quán",
+                detail="Không tìm thấy tài khoản Chủ địa điểm",
             )
 
         return updated
@@ -146,7 +148,7 @@ class ProfileService:
         if was_updated is False:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Không tìm thấy tài khoản chủ quán",
+                detail="Không tìm thấy tài khoản Chủ địa điểm",
             )
 
         return ProfileMessageResponse(

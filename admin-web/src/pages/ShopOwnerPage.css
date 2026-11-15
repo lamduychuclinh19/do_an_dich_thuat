@@ -69,6 +69,27 @@
   box-shadow: 0 8px 25px rgba(20, 55, 49, 0.05);
 }
 
+.owner-list-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #e7ecea;
+}
+
+.owner-list-heading h2 {
+  margin: 0 0 5px;
+  color: #173c36;
+  font-size: 17px;
+}
+
+.owner-list-heading p {
+  margin: 0;
+  color: #82908c;
+  font-size: 13px;
+}
+
 .owner-toolbar {
   display: flex;
   justify-content: space-between;
@@ -340,6 +361,7 @@
 
 @media (max-width: 760px) {
   .owner-heading,
+  .owner-list-heading,
   .owner-toolbar,
   .owner-heading-actions {
     align-items: stretch;

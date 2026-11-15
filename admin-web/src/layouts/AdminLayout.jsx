@@ -1,3 +1,5 @@
+// Khung trang dùng chung: thanh điều hướng, menu theo vai trò và nội dung trang.
+// Khung trang dùng chung: thanh điều hướng, menu theo vai trò và nội dung trang.
 import { useEffect, useState } from "react";
 import {
     NavLink,
@@ -136,9 +138,9 @@ function AdminLayout() {
 
                     {session?.role === "SYSTEM_ADMIN" && (
                         <>
-                            <NavLink to="/shop-owners" title="Quản lý chủ quán" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+                            <NavLink to="/shop-owners" title="Quản lý Chủ địa điểm" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
                                 <span className="nav-item-icon" aria-hidden="true">♙</span>
-                                <span className="nav-item-label">Quản lý chủ quán</span>
+                                <span className="nav-item-label">Quản lý Chủ địa điểm</span>
                             </NavLink>
                             <NavLink to="/poi-approvals" title="Duyệt địa điểm" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
                                 <span className="nav-item-icon" aria-hidden="true">✓</span>

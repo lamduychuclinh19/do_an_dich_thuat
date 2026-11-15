@@ -1,3 +1,5 @@
+// Xác thực tài khoản và chuyển người dùng tới khu vực phù hợp sau đăng nhập.
+// Xác thực tài khoản và chuyển người dùng tới khu vực phù hợp sau đăng nhập.
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
@@ -105,7 +107,7 @@ function LoginPage() {
           </p>
 
           <h1>
-            Thuyết minh địa điểm
+            THUYẾT MINH ĐỊA ĐIỂM
           </h1>
         </div>
 

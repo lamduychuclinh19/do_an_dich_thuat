@@ -2,7 +2,7 @@
 
 Frontend này dùng chung cho hai vai trò trong khu vực quản trị:
 
-- `SYSTEM_ADMIN`: xem POI/bản dịch, xử lý yêu cầu nội dung và quản lý tài khoản chủ quán.
+- `SYSTEM_ADMIN`: xem POI/bản dịch, xử lý yêu cầu nội dung và quản lý tài khoản Chủ địa điểm.
 - `SHOP_OWNER`: gửi yêu cầu tạo/cập nhật địa điểm và bản dịch/audio, xem thông báo kiểm duyệt, cập nhật hồ sơ cá nhân.
 
 Quyền trên React chỉ dùng để ẩn menu và điều hướng giao diện. FastAPI vẫn phải
@@ -37,12 +37,12 @@ Sau khi thay đổi file `.env`, khởi động lại Vite để nhận cấu h�
 
 - Xác định đúng vai trò mỗi lần đăng nhặp
 - Chặn route frontend theo `SYSTEM_ADMIN`/`SHOP_OWNER`.
-- Chỉ `SYSTEM_ADMIN` thấy trang **Quản lý chủ quán**.
-- Danh sách chủ quán có một ô tìm theo tên quán hoặc Số điện thoại, bộ lọc trạng thái,
+- Chỉ `SYSTEM_ADMIN` thấy trang **Quản lý Chủ địa điểm**.
+- Danh sách Chủ địa điểm có một ô tìm theo tên quán hoặc Số điện thoại, bộ lọc trạng thái,
   nút Khóa, Mở khóa và Đặt lại mật khẩu.
 - Chỉ `SHOP_OWNER` thấy trang **Thông tin cá nhân** và có thể đổi thông tin,
   đổi mật khẩu. Backend chịu trách nhiệm kiểm tra mật khẩu cũ và lưu bản hash.
-- Khi `SYSTEM_ADMIN` tạo POI, giao diện bắt buộc chọn một chủ quán đang hoạt động.
+- Khi `SYSTEM_ADMIN` tạo POI, giao diện bắt buộc chọn một Chủ địa điểm đang hoạt động.
 - Tạo/cập nhật địa điểm và bản dịch/audio của SHOP_OWNER được lưu thành yêu cầu chờ duyệt; nội dung chính chỉ thay đổi sau khi SYSTEM_ADMIN đồng ý.
 - SYSTEM_ADMIN xem yêu cầu ngay trong trang Quản lý Địa điểm hoặc Quản lý Bản dịch; ghi chú bắt buộc khi đồng ý/từ chối.
 - SHOP_OWNER có mục Thông báo hiển thị kết quả kiểm duyệt và ghi chú admin.
@@ -56,9 +56,9 @@ Sau khi thay đổi file `.env`, khởi động lại Vite để nhận cấu h�
 | Gửi yêu cầu nội dung | `POST /api/content-requests` |
 | Danh sách/chi tiết yêu cầu admin | `GET /api/content-requests/admin?type=POI\|TRANSLATION`, `GET /api/content-requests/admin/{id}` |
 | Duyệt/từ chối | `POST /api/content-requests/admin/{id}/decision` |
-| Thông báo chủ quán | `GET /api/content-requests/notifications`, `PATCH /api/content-requests/notifications/{id}/read` |
-| Danh sách chủ quán | `GET /api/admin/shop-owners` |
-| Tạo chủ quán | `POST /api/admin/shop-owners` |
+| Thông báo Chủ địa điểm | `GET /api/content-requests/notifications`, `PATCH /api/content-requests/notifications/{id}/read` |
+| Danh sách Chủ địa điểm | `GET /api/admin/shop-owners` |
+| Tạo Chủ địa điểm | `POST /api/admin/shop-owners` |
 | Khóa/mở khóa | `PATCH /api/admin/shop-owners/{id}` |
 | Đặt lại mật khẩu | `POST /api/admin/shop-owners/{id}/reset-password` |
 | Hồ sơ cá nhân | `GET/PATCH /api/profile/me` |
@@ -67,10 +67,10 @@ Sau khi thay đổi file `.env`, khởi động lại Vite để nhận cấu h�
 
 ## Kiểm tra nhanh trước khi demo
 
-1. Đăng nhập `SYSTEM_ADMIN`: phải thấy **Quản lý chủ quán**, không thấy
+1. Đăng nhập `SYSTEM_ADMIN`: phải thấy **Quản lý Chủ địa điểm**, không thấy
    **Thông tin cá nhân**.
 2. Đăng nhập `SHOP_OWNER`: phải thấy **Thông tin cá nhân**, không thấy
-   **Quản lý chủ quán**.
+   **Quản lý Chủ địa điểm**.
 3. Gõ trực tiếp `/shop-owners` bằng tài khoản `SHOP_OWNER`: phải bị đưa về
    `/dashboard`; API FastAPI vẫn phải trả `403` nếu cố gọi bằng Postman.
 4. Tạo nội dung nguồn tiếng Việt: kết quả phải trả đủ `vi`, `en`, `fr`, `zh`,

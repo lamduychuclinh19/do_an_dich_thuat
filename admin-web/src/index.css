@@ -24,3 +24,23 @@ button,
 input {
   font: inherit;
 }
+
+.admin-page-refresh {
+  padding: 9px 13px;
+  border: 1px solid #acd9ca;
+  border-radius: 9px;
+  color: #197058;
+  background: #f1fbf7;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.admin-page-refresh:hover:not(:disabled) {
+  background: #e2f6ee;
+}
+
+.admin-page-refresh:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}

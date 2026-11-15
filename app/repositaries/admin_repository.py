@@ -1,9 +1,12 @@
+"""Truy vấn SQL Server cho tài khoản quản trị và dữ liệu tương thích cũ."""
+
 from sqlalchemy import text
 
 from app.database import engine
 
 
 class AdminRepository:
+    """Thực hiện thao tác SQL cho tài khoản quản trị."""
     def _convert_row_to_dict(
         self,
         row,
@@ -169,7 +172,7 @@ class AdminRepository:
         is_active: bool | None = None,
     ) -> list[dict]:
         """
-        Lấy danh sách tài khoản chủ quán.
+        Lấy danh sách tài khoản Chủ địa điểm.
 
         Màn hình quản lý tài khoản chỉ quản lý SHOP_OWNER,
         vì vậy SYSTEM_ADMIN không bao giờ xuất hiện trong kết quả.
@@ -244,7 +247,7 @@ class AdminRepository:
         created_by_system_admin_id: int,
     ) -> dict:
         """
-        Tạo tài khoản chủ quán mới.
+        Tạo tài khoản Chủ địa điểm mới.
 
         Role luôn do backend đặt là SHOP_OWNER, không lấy role
         từ frontend để tránh người dùng tự nâng quyền.
@@ -312,7 +315,7 @@ class AdminRepository:
         data: dict,
     ) -> dict | None:
         """
-        Sửa thông tin chủ quán.
+        Sửa thông tin Chủ địa điểm.
 
         is_active nằm trong data của chức năng sửa,
         không có repository bật/tắt trạng thái riêng.
@@ -381,7 +384,7 @@ class AdminRepository:
         password_hash: str,
     ) -> bool:
         """
-        Đặt lại mật khẩu chủ quán về mật khẩu mặc định.
+        Đặt lại mật khẩu Chủ địa điểm về mật khẩu mặc định.
 
         Chỉ cập nhật SHOP_OWNER, không cho API quản lý tài khoản
         đặt lại mật khẩu của SYSTEM_ADMIN.
@@ -439,7 +442,7 @@ class AdminRepository:
         """
         Giữ lại hàm cũ để không làm hỏng code đã sử dụng nó.
 
-        Tài khoản chủ quán đầy đủ phải được tạo bằng
+        Tài khoản Chủ địa điểm đầy đủ phải được tạo bằng
         create_shop_owner(), không dùng hàm này cho code mới.
         """
         query = text(
@@ -486,6 +489,7 @@ class AdminRepository:
         phone_keyword: str | None = None,
         is_active: bool | None = None,
     ) -> list[dict]:
+        """Lấy các tài khoản quản trị theo phương thức tương thích cũ."""
         return self.get_all_shop_owners(
             phone_keyword=phone_keyword,
             is_active=is_active,
@@ -497,6 +501,7 @@ class AdminRepository:
         password_hash: str,
         created_by_admin_id: int,
     ) -> dict:
+        """Tạo tài khoản nhân viên bằng dữ liệu đã được service chuẩn hóa."""
         return self.create_shop_owner(
             data=data,
             password_hash=password_hash,
@@ -510,6 +515,7 @@ class AdminRepository:
         admin_id: int,
         data: dict,
     ) -> dict | None:
+        """Cập nhật thông tin của một tài khoản nhân viên theo ID."""
         return self.update_shop_owner(
             admin_id=admin_id,
             data=data,
@@ -520,6 +526,7 @@ class AdminRepository:
         admin_id: int,
         password_hash: str,
     ) -> bool:
+        """Ghi hash mật khẩu mới vào tài khoản nhân viên."""
         return self.reset_shop_owner_password(
             admin_id=admin_id,
             password_hash=password_hash,

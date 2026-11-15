@@ -1,4 +1,4 @@
-"""Repository SQL Server cho POI, có cô lập dữ liệu theo chủ địa điểm."""
+"""Repository SQL Server cho POI, có cô lập dữ liệu theo Chủ địa điểm."""
 
 from sqlalchemy import text
 
@@ -114,7 +114,7 @@ class PoiRepository:
         poi_id: str,
         owner_id: int,
     ) -> dict | None:
-        """Chỉ tìm thấy POI khi POI thuộc đúng chủ quán đang đăng nhập."""
+        """Chỉ tìm thấy POI khi POI thuộc đúng Chủ địa điểm đang đăng nhập."""
         query = text(
             f"""
             SELECT {self._select_columns()}
@@ -185,7 +185,7 @@ class PoiRepository:
         owner_id: int,
         is_active: bool,
     ) -> dict | None:
-        """Ẩn/hiện POI thuộc đúng chủ quán; không xóa dữ liệu."""
+        """Ẩn/hiện POI thuộc đúng Chủ địa điểm; không xóa dữ liệu."""
         query = text(
             f"""
             SET NOCOUNT ON;

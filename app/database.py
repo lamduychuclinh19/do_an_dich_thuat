@@ -1,3 +1,5 @@
+"""Khởi tạo kết nối SQL Server và cung cấp session cho các API."""
+
 import os
 
 from dotenv import load_dotenv
@@ -51,6 +53,7 @@ SessionLocal = sessionmaker(
 
 
 def get_db():
+    """Tạo session theo request và đóng session khi request kết thúc."""
     database_session = SessionLocal()
 
     try:
@@ -60,6 +63,7 @@ def get_db():
 
 
 def test_database_connection() -> str:
+    """Đọc tên database hiện tại để xác nhận kết nối SQL Server."""
     with engine.connect() as connection:
         database_name = connection.execute(
             text("SELECT DB_NAME()")

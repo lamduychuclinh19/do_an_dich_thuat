@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react";
+// Danh sách địa điểm, bộ lọc và thao tác quản lý theo quyền người dùng.
+// Danh sách địa điểm, bộ lọc và thao tác quản lý theo quyền người dùng.
+import { useCallback, useEffect, useState } from "react";
 import api from "../services/api";
 import "./PoiPage.css";
 import PoiFormModal from "../components/PoiFormModal";
+import PoiDetailsModal from "../components/PoiDetailsModal";
 import { getSession } from "../services/auth";
 
 function normalizeOwnerSearchValue(value) {
@@ -74,6 +77,7 @@ function PoiPage() {
     const isSystemAdmin = session?.role === "SYSTEM_ADMIN";
     const [pois, setPois] = useState([]);
     const [shopOwners, setShopOwners] = useState([]);
+    const [isLoadingShopOwners, setIsLoadingShopOwners] = useState(isSystemAdmin);
     const [searchText, setSearchText] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [ownerSearch, setOwnerSearch] = useState("");
@@ -82,16 +86,22 @@ function PoiPage() {
     const [changingPoiId, setChangingPoiId] = useState(null);
     const [errorMessage, setErrorMessage] = useState("");
 
-    useEffect(() => {
-        api.get("/api/admin/pois")
-            .then((response) => setPois(response.data))
-            .catch(() => {
-                setErrorMessage(
-                    "Không thể tải danh sách địa điểm."
-                );
-            })
-            .finally(() => setIsLoading(false));
+    const loadPois = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            setErrorMessage("");
+            const response = await api.get("/api/admin/pois");
+            setPois(response.data);
+        } catch {
+            setErrorMessage("Không thể tải danh sách địa điểm.");
+        } finally {
+            setIsLoading(false);
+        }
     }, []);
+
+    useEffect(() => {
+        loadPois();
+    }, [loadPois]);
 
     useEffect(() => {
         if (!isSystemAdmin) {
@@ -106,8 +116,10 @@ function PoiPage() {
                 setShopOwners(response.data);
             } catch {
                 setErrorMessage(
-                    "Không thể tải danh sách chủ quán để gán địa điểm."
+                    "Không thể tải danh sách Chủ địa điểm để gán địa điểm."
                 );
+            } finally {
+                setIsLoadingShopOwners(false);
             }
         };
 
@@ -228,6 +240,7 @@ function PoiPage() {
     };
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingPoi, setEditingPoi] = useState(null);
+    const [detailsPoi, setDetailsPoi] = useState(null);
     const handleOpenCreate = () => {
         setEditingPoi(null);
         setIsFormOpen(true);
@@ -264,14 +277,11 @@ function PoiPage() {
                 <div>
                     <p>QUẢN LÝ NỘI DUNG</p>
                     <h1>Địa điểm</h1>
+                    <span>Nơi quản lý các địa điểm đã được chấp thuận bởi quản trị viên</span>
 
                 </div>
 
                 <div className="poi-heading-actions">
-                    <div className="poi-summary">
-                        <strong>{pois.length}</strong>
-                        <span>địa điểm</span>
-                    </div>
 
                     {!isSystemAdmin && (
                         <button
@@ -286,6 +296,22 @@ function PoiPage() {
             </div>
 
             <section className="poi-container">
+                {isSystemAdmin && (
+                    <div className="poi-list-heading">
+                        <div>
+                            <h2>Danh sách địa điểm</h2>
+                            <p>Hiển thị {filteredPois.length} trên tổng số {pois.length} địa điểm</p>
+                        </div>
+                        <button
+                            type="button"
+                            className="admin-page-refresh"
+                            onClick={loadPois}
+                            disabled={isLoading}
+                        >
+                            {isLoading ? "Đang tải..." : "Làm mới"}
+                        </button>
+                    </div>
+                )}
                 <div
                     className="poi-toolbar"
                     style={{ flexWrap: "wrap" }}
@@ -346,7 +372,7 @@ function PoiPage() {
                         {isSystemAdmin && (
                             <div className="owner-id-filter">
                                 <input
-                                    type="search"
+                                    type="text"
                                     list="poi-owner-filter-options"
                                     value={ownerSearch}
                                     onChange={handleOwnerSearchChange}
@@ -405,7 +431,7 @@ function PoiPage() {
                                 <th>Mã</th>
                                 <th>Tên địa điểm</th>
                                 <th>Địa chỉ</th>
-                                {isSystemAdmin && <th>Mã chủ quán</th>}
+                                {isSystemAdmin && <th>Mã Chủ địa điểm</th>}
                                 <th>Bán kính</th>
                                 <th>Trạng thái</th>
                                 <th>Thao tác</th>
@@ -440,7 +466,13 @@ function PoiPage() {
 
                                         <td>
                                             <div className="poi-information">
-                                                <strong>{poi.name}</strong>
+                                                <button
+                                                    type="button"
+                                                    className="poi-name-button"
+                                                    onClick={() => setDetailsPoi(poi)}
+                                                >
+                                                    {poi.name}
+                                                </button>
                                                 <span>
                                                     {poi.description ||
                                                         "Chưa có mô tả"}
@@ -533,6 +565,17 @@ function PoiPage() {
                     shopOwners={activeShopOwners}
                     onClose={handleCloseForm}
                     onSaved={handlePoiSaved}
+                />
+            )}
+            {detailsPoi && (
+                <PoiDetailsModal
+                    poi={detailsPoi}
+                    owner={shopOwners.find(
+                        (owner) => String(owner.id) === String(detailsPoi.owner_id)
+                    )}
+                    isLoadingOwner={isLoadingShopOwners}
+                    isSystemAdmin={isSystemAdmin}
+                    onClose={() => setDetailsPoi(null)}
                 />
             )}
         </div>

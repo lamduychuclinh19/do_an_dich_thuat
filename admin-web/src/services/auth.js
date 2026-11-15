@@ -1,3 +1,4 @@
+// Lưu phiên đăng nhập và cung cấp thông tin vai trò cho giao diện.
 const TOKEN_KEY = "access_token";
 
 // Frontend chỉ đọc payload JWT để quyết định cách hiển thị giao diện.
@@ -31,7 +32,7 @@ function decodeJwtPayload(token) {
 }
 
 export function saveSession(accessToken) {
-  // Mỗi tab có phiên riêng để admin và chủ quán có thể đăng nhập đồng thời.
+  // Mỗi tab có phiên riêng để admin và Chủ địa điểm có thể đăng nhập đồng thời.
   // localStorage được chia sẻ giữa các tab cùng origin và sẽ ghi đè token.
   sessionStorage.setItem(TOKEN_KEY, accessToken);
   return getSession();
@@ -80,7 +81,7 @@ export function getRoleLabel(role) {
   }
 
   if (role === "SHOP_OWNER") {
-    return "Chủ quán";
+    return "Chủ địa điểm";
   }
 
   return "Không xác định";
