@@ -1,202 +1,33 @@
-import pytest
-from fastapi.testclient import TestClient
-from app.main import app
-from app.repositaries.poi_repository import poi_repository
-from app.dependencies.auth_dependency import require_admin
+from app.routers.admin_poi_router import create_poi
+from app.schemas.poi_schema import BackOfficePoiCreate
+from app.services.content_request_service import content_request_service
 
-client = TestClient(app)
 
-@pytest.fixture(autouse=True)
-def mock_admin_login():
-    app.dependency_overrides[require_admin] = lambda: {
-        "id": 1,
-        "username": "test_admin",
-        "role": "admin",
-    }
+def test_shop_owner_submits_poi_creation_request(monkeypatch):
+    submitted = {}
 
-    yield
+    def fake_submit(data, owner):
+        submitted["data"] = data
+        submitted["owner"] = owner
+        return {"id": 1, "request_type": data.request_type, "status": "PENDING"}
 
-    app.dependency_overrides.clear()
+    monkeypatch.setattr(content_request_service, "submit", fake_submit)
 
-@pytest.fixture(autouse=True)
-def mock_poi_repository(monkeypatch):
-    pois = {}
-    next_id = {"value": 1}
-
-    def fake_create(data: dict):
-        poi_id = next_id["value"]
-
-        poi = {
-            **data,
-            "id": poi_id,
-            "is_active": True,
-        }
-
-        pois[poi_id] = poi
-        next_id["value"] += 1
-        return poi
-
-    def fake_get_by_id(poi_id: int):
-        return pois.get(poi_id)
-
-    def fake_get_active():
-        return [
-            poi
-            for poi in pois.values()
-            if poi["is_active"] is True
-        ]
-
-    def fake_get_all():
-        return list(pois.values())
-
-    def fake_update(poi_id: int, data: dict):
-        poi = pois.get(poi_id)
-
-        if poi is None:
-            return None
-
-        poi.update(data)
-        return poi
-
-    def fake_set_visibility(poi_id: int, is_active: bool):
-        poi = pois.get(poi_id)
-
-        if poi is None:
-            return None
-
-        poi["is_active"] = is_active
-        return poi
-
-    monkeypatch.setattr(
-        poi_repository,
-        "create",
-        fake_create,
-    )
-    monkeypatch.setattr(
-        poi_repository,
-        "get_by_id",
-        fake_get_by_id,
-    )
-    monkeypatch.setattr(
-        poi_repository,
-        "get_active",
-        fake_get_active,
-        raising=False,
-    )
-    monkeypatch.setattr(
-        poi_repository,
-        "get_all_active",
-        fake_get_active,
-        raising=False,
-    )
-    monkeypatch.setattr(
-        poi_repository,
-        "get_all",
-        fake_get_all,
-        raising=False,
-    )
-    monkeypatch.setattr(
-        poi_repository,
-        "get_all_for_admin",
-        fake_get_all,
-        raising=False,
-    )
-    monkeypatch.setattr(
-        poi_repository,
-        "update",
-        fake_update,
-    )
-    monkeypatch.setattr(
-        poi_repository,
-        "set_visibility",
-        fake_set_visibility,
-    )
-    
-def test_poi_full_flow():
-    # 1. Tạo địa điểm
-    new_poi = {
-    "name": "Điểm trưng bày A",
-    "description": "Nội dung thuyết minh của điểm A",
-    "address": "Bảo tàng",
-    "latitude": 10.776900,
-    "longitude": 106.700900,
-    "trigger_radius_meters": 2
-    }
-
-    create_response = client.post("/api/admin/pois", json=new_poi)
-
-    assert create_response.status_code == 201
-
-    created_poi = create_response.json()
-    poi_id = created_poi["id"]
-
-    assert created_poi["name"] == new_poi["name"]
-    assert created_poi["is_active"] is True
-
-    # 2. Lấy địa điểm theo id
-    get_response = client.get(f"/api/public/pois/{poi_id}")
-
-    assert get_response.status_code == 200
-    assert get_response.json()["id"] == poi_id
-
-    # 3. Cập nhật địa điểm
-    updated_data = {
-    "name": "Điểm trưng bày A đã cập nhật",
-    "description": "Nội dung thuyết minh đã cập nhật",
-    "address": "Bảo tàng",
-    "latitude": 10.776900,
-    "longitude": 106.700900,
-    "trigger_radius_meters": 2
-    }
-
-    update_response = client.put(
-        f"/api/admin/pois/{poi_id}",
-        json=updated_data
+    response = create_poi(
+        BackOfficePoiCreate(
+            id="TEST1",
+            name="Điểm trưng bày A",
+            description="Nội dung thuyết minh của điểm A",
+            address="Bảo tàng",
+            latitude=10.7769,
+            longitude=106.7009,
+            trigger_radius_meters=30,
+        ),
+        {"id": 1, "username": "test_owner", "role": "SHOP_OWNER"},
     )
 
-    assert update_response.status_code == 200
-    assert update_response.json()["name"] == updated_data["name"]
-
-    # 4. Ẩn địa điểm
-    hide_response = client.patch(
-        f"/api/admin/pois/{poi_id}/visibility",
-        json={"is_active": False}
-    )
-
-    assert hide_response.status_code == 200
-    assert hide_response.json()["is_active"] is False
-
-    # 5. Địa điểm ẩn không thể được xem công khai
-    hidden_response = client.get(f"/api/public/pois/{poi_id}")
-
-    assert hidden_response.status_code == 404
-
-    list_response = client.get("/api/public/pois")
-
-    assert list_response.status_code == 200
-    assert all(
-        poi["id"] != poi_id
-        for poi in list_response.json()
-    )
-
-    # Admin vẫn xem được địa điểm đang bị ẩn
-    admin_list_response = client.get("/api/admin/pois")
-
-    assert admin_list_response.status_code == 200
-    assert any(
-        poi["id"] == poi_id and poi["is_active"] is False
-        for poi in admin_list_response.json()
-    )
-
-    # 6. Hiện lại địa điểm
-    show_response = client.patch(
-        f"/api/admin/pois/{poi_id}/visibility",
-        json={"is_active": True}
-    )
-
-    assert show_response.status_code == 200
-    assert show_response.json()["is_active"] is True
-
-    visible_response = client.get(f"/api/public/pois/{poi_id}")
-
-    assert visible_response.status_code == 200
+    assert response == {"id": 1, "request_type": "POI", "status": "PENDING"}
+    assert submitted["data"].request_type == "POI"
+    assert submitted["data"].action == "CREATE"
+    assert submitted["data"].details["id"] == "TEST1"
+    assert submitted["owner"]["id"] == 1

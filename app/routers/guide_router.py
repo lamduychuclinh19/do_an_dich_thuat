@@ -68,7 +68,7 @@ def get_nearby_guide(
     ),
 ):
     """
-    Tìm một POI gần vị trí hiện tại của khách.
+    Tìm một địa điểm gần vị trí hiện tại của khách.
 
     API này vẫn được giữ để kiểm tra chức năng nearby
     hoặc dùng khi frontend muốn backend tính khoảng cách.

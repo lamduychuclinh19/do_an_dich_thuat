@@ -60,6 +60,7 @@
 }
 
 .poi-form-modal input,
+.poi-form-modal select,
 .poi-form-modal textarea {
   width: 100%;
   padding: 12px 14px;
@@ -72,6 +73,7 @@
 }
 
 .poi-form-modal input:focus,
+.poi-form-modal select:focus,
 .poi-form-modal textarea:focus {
   border-color: #a9823c;
   box-shadow: 0 0 0 4px rgba(169, 130, 60, 0.12);
@@ -106,6 +108,28 @@
   color: #a42c2c;
   background: #ffeded;
   font-size: 13px;
+}
+
+.field-error {
+  margin: 7px 0 0;
+  color: #b42318;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.poi-form-modal input[aria-invalid="true"],
+.poi-form-modal textarea[aria-invalid="true"],
+.poi-form-modal select[aria-invalid="true"] {
+  border-color: #d92d20;
+  background: #fff8f7;
+}
+
+.poi-form-modal input[aria-invalid="true"]:focus,
+.poi-form-modal textarea[aria-invalid="true"]:focus,
+.poi-form-modal select[aria-invalid="true"]:focus {
+  border-color: #d92d20;
+  box-shadow: 0 0 0 4px rgba(217, 45, 32, 0.12);
 }
 
 .modal-actions {
@@ -154,4 +178,86 @@
     grid-template-columns: 1fr;
     gap: 0;
   }
+}
+
+.owner-select-note {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #805c20;
+  background: #fff7e6;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.poi-id-note {
+  margin: 8px 0 0;
+  color: #73837f;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.poi-use-current-location {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12px;
+  padding: 11px 16px;
+  border: 1px solid #ccd7d4;
+  border-radius: 9px;
+  color: #285048;
+  background: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease;
+}
+
+.poi-use-current-location:hover {
+  border-color: #acd9ca;
+  background: #f1f5f4;
+}
+
+.poi-use-current-location:focus-visible,
+.poi-address-suggestions button:focus-visible {
+  outline: 3px solid rgba(57, 115, 105, .25);
+  outline-offset: 2px;
+}
+
+.poi-geocode-hint {
+  margin: 7px 0 0;
+  color: #82908c;
+  font-size: 12px;
+}
+
+.poi-address-suggestions {
+  display: grid;
+  gap: 2px;
+  margin-top: 6px;
+  overflow: hidden;
+  border: 1px solid #dce5e2;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(20, 55, 49, .10);
+}
+
+.poi-address-suggestions button {
+  width: 100%;
+  padding: 11px 13px;
+  border: 0;
+  color: #294741;
+  background: #fff;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: left;
+  cursor: pointer;
+}
+
+.poi-address-suggestions button + button {
+  border-top: 1px solid #edf1f0;
+}
+
+.poi-address-suggestions button:hover {
+  background: #f1f8f5;
 }
