@@ -43,13 +43,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Unit tests
-        run: python -m pytest tests/unit -v --cov=app
+      - name: Kiểm tra cú pháp
+        run: python -m compileall -q app database
 
-      - name: Integration tests
-        run: >
-          python -m pytest tests/integration -v
-          --cov=app --cov-append --cov-report=term-missing
+      - name: Chạy test
+        run: python -m pytest tests -v --cov=app --cov-report=term-missing
 
   frontend:
     name: Frontend (lint -> build)
