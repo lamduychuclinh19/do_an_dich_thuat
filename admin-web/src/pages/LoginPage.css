@@ -5,14 +5,6 @@
   background: #f7f5f0;
 }
 
-.owner-signup-link {
-  display: block;
-  margin-top: 14px;
-  text-align: center;
-  color: #26704b;
-  font-size: 14px;
-}
-
 .login-introduction {
   position: relative;
   display: flex;
@@ -76,10 +68,9 @@
 
 .introduction-content h1 {
   margin: 0 0 24px;
-  font-family: Inter, "Segoe UI", system-ui, sans-serif;
+  font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(42px, 5vw, 70px);
-  font-weight: 700;
-  letter-spacing: -0.035em;
+  font-weight: 500;
   line-height: 1.08;
 }
 

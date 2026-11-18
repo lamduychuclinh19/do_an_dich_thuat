@@ -1,0 +1,9 @@
+.git
+.github
+.venv
+.env
+__pycache__
+*.pyc
+tests
+admin-web
+uploads

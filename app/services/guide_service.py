@@ -1,11 +1,10 @@
-"""Chọn POI gần khách và bản dịch phù hợp để phát thuyết minh."""
-
 from fastapi import HTTPException, status
 
 from app.repositaries.translation_repository import (
     translation_repository,
 )
 from app.services.poi_service import poi_service
+from app.services.translation_service import translation_service
 
 
 # Những ngôn ngữ backend hiện hỗ trợ.
@@ -19,7 +18,6 @@ SUPPORTED_LANGUAGE_CODES = {
 
 
 class GuideService:
-    """Kết hợp vị trí, POI, ngôn ngữ, bản dịch và audio."""
     def get_nearby_guide(
         self,
         latitude: float,
@@ -30,8 +28,8 @@ class GuideService:
         Tìm một địa điểm đang hoạt động ở gần khách
         và trả nội dung thuyết minh đúng ngôn ngữ.
 
-        Nếu chưa có ngôn ngữ khách chọn, ưu tiên tiếng Anh
-        rồi tiếng Việt như API danh sách hướng dẫn.
+        Đây là API nearby cũ. Hiện tại API này vẫn yêu cầu
+        POI phải có đúng ngôn ngữ khách chọn.
         """
 
         # Tìm POI nằm trong bán kính kích hoạt.
@@ -45,20 +43,10 @@ class GuideService:
             return None
 
         # Tìm đúng bản dịch mà khách đã chọn.
-        normalized_language_code = language_code.strip().lower()
-        translation = translation_repository.get_by_poi_and_language(
-            nearby_poi["id"], normalized_language_code
+        translation = translation_service.get_translation(
+            nearby_poi["id"],
+            language_code,
         )
-        if translation is None and normalized_language_code != "en":
-            translation = translation_repository.get_by_poi_and_language(
-                nearby_poi["id"], "en"
-            )
-        if translation is None and normalized_language_code != "vi":
-            translation = translation_repository.get_by_poi_and_language(
-                nearby_poi["id"], "vi"
-            )
-        if translation is None:
-            return None
 
         # Không trả bản dịch đã bị admin ẩn.
         if translation.get("is_active") is False:
@@ -76,7 +64,8 @@ class GuideService:
             "longitude": nearby_poi["longitude"],
             "distance_meters":
                 nearby_poi["distance_meters"],
-            "language_code": translation["language_code"],
+            "language_code":
+                translation["language_code"],
             "title": translation["title"],
             "narration_text":
                 translation["narration_text"],

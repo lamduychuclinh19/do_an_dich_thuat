@@ -1,5 +1,3 @@
-"""Tạo tài khoản quản trị ban đầu cho môi trường được cấu hình."""
-
 import os
 
 from dotenv import load_dotenv
@@ -13,7 +11,6 @@ load_dotenv()
 
 
 def seed_admin() -> None:
-    """Tạo hoặc chuẩn bị tài khoản admin từ cấu hình của môi trường."""
     username = os.getenv("ADMIN_USERNAME")
     password_hash = os.getenv("ADMIN_PASSWORD_HASH")
 

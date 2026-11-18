@@ -1,5 +1,3 @@
-"""Khởi tạo kết nối SQL Server và cung cấp session cho các API."""
-
 import os
 
 from dotenv import load_dotenv
@@ -22,11 +20,24 @@ if not db_server or not db_name or not db_driver:
     )
 
 
+db_user = os.getenv("DB_USER")
+db_password = os.getenv("DB_PASSWORD")
+
+if db_user and db_password:
+    # SQL Server Authentication: dùng khi chạy trong Docker/Linux.
+    # Mật khẩu đặt trong {} và nhân đôi dấu } theo quy tắc của ODBC.
+    escaped_password = db_password.replace("}", "}}")
+    authentication = f"UID={db_user};PWD={{{escaped_password}}};"
+else:
+    # Windows Authentication: giữ nguyên cách chạy trên máy local.
+    authentication = "Trusted_Connection=yes;"
+
+
 connection_string = (
     f"DRIVER={{{db_driver}}};"
     f"SERVER={db_server};"
     f"DATABASE={db_name};"
-    "Trusted_Connection=yes;"
+    f"{authentication}"
     "Encrypt=yes;"
     "TrustServerCertificate=yes;"
     "LongAsMax=Yes;"
@@ -53,7 +64,6 @@ SessionLocal = sessionmaker(
 
 
 def get_db():
-    """Tạo session theo request và đóng session khi request kết thúc."""
     database_session = SessionLocal()
 
     try:
@@ -63,7 +73,6 @@ def get_db():
 
 
 def test_database_connection() -> str:
-    """Đọc tên database hiện tại để xác nhận kết nối SQL Server."""
     with engine.connect() as connection:
         database_name = connection.execute(
             text("SELECT DB_NAME()")

@@ -1,26 +1,10 @@
-// Chặn trang theo trạng thái đăng nhập và danh sách vai trò được phép.
-// Chặn trang theo trạng thái đăng nhập và danh sách vai trò được phép.
-import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { getSession, isBackOfficeRole } from "../services/auth";
+import { Navigate, Outlet } from "react-router-dom";
 
-function ProtectedRoute({ allowedRoles }) {
-  const session = getSession();
-  const location = useLocation();
+function ProtectedRoute() {
+  const token = localStorage.getItem("access_token");
 
-  // Không có session hợp lệ (hoặc token đã hết hạn) thì bắt buộc đăng nhập.
-  if (!session || !isBackOfficeRole(session.role)) {
-    return (
-      <Navigate
-        to="/login"
-        replace
-        state={{ from: location.pathname }}
-      />
-    );
-  }
-
-  // Chặn người dùng có đăng nhập nhưng không đúng vai trò.
-  if (allowedRoles && !allowedRoles.includes(session.role)) {
-    return <Navigate to="/dashboard" replace />;
+  if (!token) {
+    return <Navigate to="/login" replace />;
   }
 
   return <Outlet />;
