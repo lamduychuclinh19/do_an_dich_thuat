@@ -8,3 +8,6 @@ translations-512002-9107abf49537.json
 .fake
 uploads/audio/*
 uploads/audio.backup
+
+.coverage
+.pytest_cache/
