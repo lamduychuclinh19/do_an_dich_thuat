@@ -1,0 +1,2060 @@
+From cce71889f8ee0f7d6593043076e25823fd706c03 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 19 Nov 2026 00:24:50 +0700
+Subject: [PATCH] Add unit/integration tests, CI pipeline and Docker deployment
+ files
+
+- tests/unit, tests/integration, tests/conftest.py, pytest.ini
+- ci.yml: backend unit -> integration, CI/CD workflow
+- Dockerfile, docker-compose.prod.yml, admin-web Dockerfile + nginx.conf
+- .gitignore: ignore .coverage and .pytest_cache
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Cz6pzDnNj2MtqgW8EDY7yN
+---
+ .dockerignore                                |   9 +
+ .github/workflows/ci.yml                     | 196 +++++++++---
+ .gitignore                                   |   2 +
+ Dockerfile                                   |  35 +++
+ admin-web/.dockerignore                      |   3 +
+ admin-web/Dockerfile                         |  14 +
+ admin-web/nginx.conf                         |  31 ++
+ docker-compose.prod.yml                      |  21 ++
+ pytest.ini                                   |   4 +
+ tests/conftest.py                            | 313 +++++++++++++++++++
+ tests/integration/test_auth_api.py           |  86 +++++
+ tests/integration/test_poi_api.py            | 202 ++++++++++++
+ tests/integration/test_poi_validation_api.py |  67 ++++
+ tests/integration/test_public_api.py         | 100 ++++++
+ tests/integration/test_translation_api.py    | 179 +++++++++++
+ tests/unit/test_audio_service.py             | 173 ++++++++++
+ tests/unit/test_auth_service.py              | 140 +++++++++
+ tests/unit/test_guide_service.py             |  27 ++
+ tests/unit/test_poi_service.py               |  56 ++++
+ tests/unit/test_translation_service.py       | 182 +++++++++++
+ 20 files changed, 1789 insertions(+), 51 deletions(-)
+ create mode 100644 .dockerignore
+ create mode 100644 Dockerfile
+ create mode 100644 admin-web/.dockerignore
+ create mode 100644 admin-web/Dockerfile
+ create mode 100644 admin-web/nginx.conf
+ create mode 100644 docker-compose.prod.yml
+ create mode 100644 pytest.ini
+ create mode 100644 tests/conftest.py
+ create mode 100644 tests/integration/test_auth_api.py
+ create mode 100644 tests/integration/test_poi_api.py
+ create mode 100644 tests/integration/test_poi_validation_api.py
+ create mode 100644 tests/integration/test_public_api.py
+ create mode 100644 tests/integration/test_translation_api.py
+ create mode 100644 tests/unit/test_audio_service.py
+ create mode 100644 tests/unit/test_auth_service.py
+ create mode 100644 tests/unit/test_guide_service.py
+ create mode 100644 tests/unit/test_poi_service.py
+ create mode 100644 tests/unit/test_translation_service.py
+
+diff --git a/.dockerignore b/.dockerignore
+new file mode 100644
+index 0000000..9b3857a
+--- /dev/null
++++ b/.dockerignore
+@@ -0,0 +1,9 @@
++.git
++.github
++.venv
++.env
++__pycache__
++*.pyc
++tests
++admin-web
++uploads
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 3fad513..1f9cc4e 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -1,93 +1,187 @@
+ name: CI/CD
+ 
+-# Chạy kiểm tra backend, lint/build frontend và lưu artifact cho mỗi nhánh.
+ on:
+   push:
+-    branches:
+-      - "**"
++    branches: [main]
+   pull_request:
+-    branches:
+-      - main
++    branches: [main]
+   workflow_dispatch:
+ 
+ permissions:
+   contents: read
+ 
+ concurrency:
+-  group: ci-${{ github.workflow }}-${{ github.ref }}
+-  cancel-in-progress: true
++  group: ci-cd-${{ github.ref }}
++  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
++
++env:
++  # Giá trị giả cho test: SQLAlchemy chỉ tạo engine, không bao giờ kết nối.
++  DB_SERVER: localhost
++  DB_NAME: MuseumGuideDB
++  DB_DRIVER: ODBC Driver 18 for SQL Server
++  JWT_SECRET_KEY: github-actions-test-secret-key-0123456789
++  JWT_EXPIRE_MINUTES: "60"
+ 
+ jobs:
+-  # Kiểm tra cú pháp và bộ kiểm thử Python trên runner Linux.
++  # ---------------------------------------------------------------- CI
+   backend:
+-    name: Backend checks
++    name: Backend (unit -> integration)
+     runs-on: ubuntu-latest
+-    env:
+-      DB_SERVER: localhost
+-      DB_NAME: MuseumGuideDB_V2
+-      DB_DRIVER: ODBC Driver 18 for SQL Server
+-      JWT_SECRET_KEY: github-actions-test-secret-key
+-      JWT_EXPIRE_MINUTES: 60
+-
+     steps:
+-      - name: Check out source
+-        uses: actions/checkout@v4
++      - name: Lấy mã nguồn
++        uses: actions/checkout@v7
+ 
+-      - name: Set up Python
+-        uses: actions/setup-python@v5
++      - name: Cài Python
++        uses: actions/setup-python@v7
+         with:
+           python-version: "3.12"
+           cache: pip
+           cache-dependency-path: requirements.txt
+ 
+-      - name: Install ODBC runtime dependencies
+-        run: |
+-          sudo apt-get update
+-          sudo apt-get install --yes unixodbc-dev
+-
+-      - name: Install Python dependencies
++      - name: Cài thư viện
+         run: |
+           python -m pip install --upgrade pip
+-          python -m pip install -r requirements.txt
++          pip install -r requirements.txt
+ 
+-      - name: Check Python syntax
+-        run: python -m compileall -q app database
++      - name: Unit tests
++        run: python -m pytest tests/unit -v --cov=app
+ 
+-      - name: Run backend tests
+-        run: python -m pytest -v
++      - name: Integration tests
++        run: >
++          python -m pytest tests/integration -v
++          --cov=app --cov-append --cov-report=term-missing
+ 
+-  # Kiểm tra quy tắc mã nguồn và đóng gói giao diện quản trị.
+   frontend:
+-    name: Frontend checks and build
++    name: Frontend (lint -> build)
+     runs-on: ubuntu-latest
+-
++    defaults:
++      run:
++        working-directory: admin-web
+     steps:
+-      - name: Check out source
+-        uses: actions/checkout@v4
++      - name: Lấy mã nguồn
++        uses: actions/checkout@v7
+ 
+-      - name: Set up Node.js
+-        uses: actions/setup-node@v4
++      - name: Cài Node.js
++        uses: actions/setup-node@v7
+         with:
+-          node-version: "22"
++          node-version: 22
+           cache: npm
+           cache-dependency-path: admin-web/package-lock.json
+ 
+-      - name: Install frontend dependencies
+-        working-directory: admin-web
++      - name: Cài thư viện
+         run: npm ci
+ 
+-      - name: Lint frontend
+-        working-directory: admin-web
++      - name: Lint
+         run: npm run lint
+ 
+-      - name: Build frontend
+-        working-directory: admin-web
++      - name: Build
+         run: npm run build
++        env:
++          VITE_API_URL: /
++
++  # ---------------------------------------------------------------- CD
++  publish-images:
++    name: Build và đẩy Docker image lên GHCR
++    needs: [backend, frontend]
++    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
++    runs-on: ubuntu-latest
++    permissions:
++      contents: read
++      packages: write
++    outputs:
++      image: ${{ steps.name.outputs.image }}
++    steps:
++      - uses: actions/checkout@v7
+ 
+-      - name: Publish frontend build artifact
+-        uses: actions/upload-artifact@v4
++      - name: Tên image (bắt buộc viết thường)
++        id: name
++        run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
++
++      - uses: docker/setup-buildx-action@v4
++
++      - uses: docker/login-action@v4
++        with:
++          registry: ghcr.io
++          username: ${{ github.actor }}
++          password: ${{ secrets.GITHUB_TOKEN }}
++
++      - name: Build và push image backend
++        uses: docker/build-push-action@v7
++        with:
++          context: .
++          push: true
++          tags: |
++            ${{ steps.name.outputs.image }}:${{ github.sha }}
++            ${{ steps.name.outputs.image }}:latest
++          cache-from: type=gha,scope=api
++          cache-to: type=gha,scope=api,mode=max
++
++      - name: Build và push image giao diện quản lý
++        uses: docker/build-push-action@v7
+         with:
+-          name: admin-web-dist
+-          path: admin-web/dist/
+-          if-no-files-found: error
+-          retention-days: 7
++          context: admin-web
++          push: true
++          tags: |
++            ${{ steps.name.outputs.image }}-web:${{ github.sha }}
++            ${{ steps.name.outputs.image }}-web:latest
++          cache-from: type=gha,scope=web
++          cache-to: type=gha,scope=web,mode=max
++
++  deploy:
++    name: Deploy lên server
++    needs: publish-images
++    runs-on: ubuntu-latest
++    # Tạo Environment "production" trên GitHub; bật "Required reviewers"
++    # nếu muốn có bước bấm duyệt trước khi deploy.
++    environment: production
++    permissions:
++      contents: read
++      packages: read   # để server kéo được image riêng tư từ GHCR
++    steps:
++      - uses: actions/checkout@v7
++
++      - name: Cấu hình SSH
++        env:
++          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
++          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
++        run: |
++          install -m 700 -d ~/.ssh
++          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
++          chmod 600 ~/.ssh/id_deploy
++          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
++
++      - name: Gửi docker-compose lên server
++        env:
++          TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
++          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
++        run: >
++          scp -i ~/.ssh/id_deploy docker-compose.prod.yml
++          "$TARGET:$DEPLOY_PATH/docker-compose.yml"
++
++      - name: Kéo image mới và khởi động lại
++        env:
++          TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
++          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
++          IMAGE: ${{ needs.publish-images.outputs.image }}
++          TAG: ${{ github.sha }}
++          GHCR_USER: ${{ github.actor }}
++          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
++        run: |
++          ssh -i ~/.ssh/id_deploy "$TARGET" bash -s <<EOF
++          set -euo pipefail
++          cd "$DEPLOY_PATH"
++          export API_IMAGE="$IMAGE:$TAG" WEB_IMAGE="$IMAGE-web:$TAG"
++          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
++          docker compose pull
++          docker logout ghcr.io
++          docker compose up -d --remove-orphans --wait --wait-timeout 120
++          docker image prune -f
++          EOF
++
++      - name: Smoke test (nginx -> API -> SQL Server)
++        env:
++          TARGET: ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}
++        run: |
++          ssh -i ~/.ssh/id_deploy "$TARGET" \
++            "curl -fsS --retry 10 --retry-delay 3 --retry-connrefused \
++             'http://127.0.0.1/api/public/guide/load-all?language_code=vi'"
+diff --git a/.gitignore b/.gitignore
+index 39dc049..7eebd4a 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -8,3 +8,5 @@ translations-512002-9107abf49537.json
+ .fake
+ uploads/audio/*
+ uploads/audio.backup
++.coverage
++.pytest_cache/
+diff --git a/Dockerfile b/Dockerfile
+new file mode 100644
+index 0000000..6bb95ee
+--- /dev/null
++++ b/Dockerfile
+@@ -0,0 +1,35 @@
++FROM python:3.12-slim-bookworm
++
++ENV PYTHONDONTWRITEBYTECODE=1 \
++    PYTHONUNBUFFERED=1
++
++# ODBC Driver 18 cho SQL Server (pyodbc cần driver này khi chạy trên Linux)
++RUN apt-get update \
++    && apt-get install -y --no-install-recommends curl gnupg ca-certificates \
++    && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
++       | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \
++    && curl -fsSL https://packages.microsoft.com/config/debian/12/prod.list \
++       -o /etc/apt/sources.list.d/mssql-release.list \
++    && apt-get update \
++    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql18 \
++    && rm -rf /var/lib/apt/lists/*
++
++WORKDIR /app
++
++COPY requirements.txt .
++RUN pip install --no-cache-dir -r requirements.txt
++
++COPY app ./app
++COPY database ./database
++
++RUN useradd --create-home appuser \
++    && mkdir -p uploads/audio \
++    && chown -R appuser:appuser /app
++USER appuser
++
++EXPOSE 8000
++
++HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=5 \
++  CMD python -c "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/health', timeout=3)"
++
++CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+diff --git a/admin-web/.dockerignore b/admin-web/.dockerignore
+new file mode 100644
+index 0000000..9c97bbd
+--- /dev/null
++++ b/admin-web/.dockerignore
+@@ -0,0 +1,3 @@
++node_modules
++dist
++.env
+diff --git a/admin-web/Dockerfile b/admin-web/Dockerfile
+new file mode 100644
+index 0000000..6e6054f
+--- /dev/null
++++ b/admin-web/Dockerfile
+@@ -0,0 +1,14 @@
++FROM node:22-alpine AS build
++WORKDIR /app
++COPY package.json package-lock.json ./
++RUN npm ci
++COPY . .
++# "/" = gọi API cùng origin (nginx chuyển tiếp /api và /audio sang backend)
++ARG VITE_API_URL=/
++ENV VITE_API_URL=$VITE_API_URL
++RUN npm run build
++
++FROM nginx:stable-alpine
++COPY nginx.conf /etc/nginx/conf.d/default.conf
++COPY --from=build /app/dist /usr/share/nginx/html
++EXPOSE 80
+diff --git a/admin-web/nginx.conf b/admin-web/nginx.conf
+new file mode 100644
+index 0000000..4e05f3b
+--- /dev/null
++++ b/admin-web/nginx.conf
+@@ -0,0 +1,31 @@
++server {
++    listen 80;
++    server_name _;
++
++    root /usr/share/nginx/html;
++    index index.html;
++
++    # DNS nội bộ của Docker: nginx tự phân giải lại IP của "api"
++    # mỗi khi container api được tạo lại (tránh lỗi 502 sau khi deploy).
++    resolver 127.0.0.11 valid=10s;
++    set $backend http://api:8000;
++
++    client_max_body_size 2m;   # file TXT tối đa 1 MB
++
++    location /api/ {
++        proxy_pass $backend;
++        proxy_set_header Host $host;
++        proxy_set_header X-Real-IP $remote_addr;
++        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
++        proxy_set_header X-Forwarded-Proto $scheme;
++    }
++
++    location /audio/ {
++        proxy_pass $backend;
++    }
++
++    # React Router: mọi đường dẫn còn lại trả về index.html
++    location / {
++        try_files $uri /index.html;
++    }
++}
+diff --git a/docker-compose.prod.yml b/docker-compose.prod.yml
+new file mode 100644
+index 0000000..1a1b0bd
+--- /dev/null
++++ b/docker-compose.prod.yml
+@@ -0,0 +1,21 @@
++name: museum-guide
++
++services:
++  api:
++    image: ${API_IMAGE:?API_IMAGE chưa được đặt}
++    restart: unless-stopped
++    env_file: .env
++    volumes:
++      - audio_data:/app/uploads/audio
++
++  web:
++    image: ${WEB_IMAGE:?WEB_IMAGE chưa được đặt}
++    restart: unless-stopped
++    depends_on:
++      api:
++        condition: service_healthy
++    ports:
++      - "80:80"
++
++volumes:
++  audio_data:
+diff --git a/pytest.ini b/pytest.ini
+new file mode 100644
+index 0000000..c34e94f
+--- /dev/null
++++ b/pytest.ini
+@@ -0,0 +1,4 @@
++[pytest]
++testpaths = tests
++pythonpath = .
++addopts = -ra
+diff --git a/tests/conftest.py b/tests/conftest.py
+new file mode 100644
+index 0000000..9983aa5
+--- /dev/null
++++ b/tests/conftest.py
+@@ -0,0 +1,313 @@
++"""Cấu hình và dữ liệu giả dùng chung cho toàn bộ test."""
++import os
++from datetime import datetime, timezone
++
++# PHẢI đặt trước khi import bất kỳ module app.* nào: app/database.py kiểm tra
++# biến môi trường ngay lúc import. Test không bao giờ kết nối SQL Server thật
++# (SQLAlchemy chỉ tạo engine, không mở kết nối).
++os.environ.setdefault("DB_SERVER", "localhost")
++os.environ.setdefault("DB_NAME", "MuseumGuideDB")
++os.environ.setdefault("DB_DRIVER", "ODBC Driver 18 for SQL Server")
++os.environ.setdefault("JWT_SECRET_KEY", "pytest-only-secret-key-at-least-32-bytes")
++os.environ.setdefault("JWT_EXPIRE_MINUTES", "60")
++
++import pytest  # noqa: E402
++from fastapi.testclient import TestClient  # noqa: E402
++
++
++class FakeBackend:
++    """SQL Server + Edge-TTS giả, chạy hoàn toàn trong bộ nhớ."""
++
++    def __init__(self):
++        self.pois: dict[int, dict] = {}
++        self.translations: dict[int, dict] = {}
++        self.admins: dict[int, dict] = {}
++        self.audio_files: set[str] = set()  # các file MP3 đang "tồn tại"
++        self._poi_seq = 1
++        self._translation_seq = 1
++        self._audio_seq = 1
++
++    # ------------------------------------------------------------------
++    # Helper để test dựng sẵn dữ liệu
++    # ------------------------------------------------------------------
++    def add_poi(self, **overrides) -> dict:
++        data = {
++            "name": "Điểm A",
++            "description": "Mô tả điểm A",
++            "address": "Bảo tàng",
++            "latitude": 10.7769,
++            "longitude": 106.7009,
++            "trigger_radius_meters": 2.0,
++        }
++        data.update(overrides)
++        return self._poi_create(data)
++
++    def add_translation(
++        self,
++        poi_id: int,
++        language_code: str = "vi",
++        title: str = "Tiêu đề",
++        narration_text: str = "Nội dung thuyết minh",
++        is_active: bool = True,
++    ) -> dict:
++        translation = {
++            "id": self._translation_seq,
++            "poi_id": poi_id,
++            "language_code": language_code,
++            "title": title,
++            "narration_text": narration_text,
++            "audio_url": self._new_audio(),
++            "is_active": is_active,
++        }
++        self.translations[translation["id"]] = translation
++        self._translation_seq += 1
++        return dict(translation)
++
++    def add_admin(
++        self,
++        username: str = "admin01",
++        password: str = "Secret123",
++        role: str = "OWNER",
++        is_active: bool = True,
++    ) -> dict:
++        from app.services.auth_service import password_hash
++
++        admin = {
++            "id": len(self.admins) + 1,
++            "username": username,
++            "password_hash": password_hash.hash(password),
++            "full_name": "Quản trị viên",
++            "phone": None,
++            "email": None,
++            "role": role,
++            "is_active": is_active,
++            "must_change_password": False,
++            "last_login_at": None,
++            "created_by_admin_id": None,
++        }
++        self.admins[admin["id"]] = admin
++        return dict(admin)
++
++    # ------------------------------------------------------------------
++    # Thay thế repository / audio_service bằng bản giả
++    # ------------------------------------------------------------------
++    def install(self, monkeypatch) -> None:
++        from app.repositaries.admin_repository import admin_repository
++        from app.repositaries.poi_repository import poi_repository
++        from app.repositaries.translation_repository import (
++            translation_repository,
++        )
++        from app.services.audio_service import audio_service
++
++        replacements = [
++            (poi_repository, {
++                "create": self._poi_create,
++                "get_by_id": self._poi_get_by_id,
++                "update": self._poi_update,
++                "set_visibility": self._poi_set_visibility,
++                "get_active": self._poi_get_active,
++                "get_all_for_admin": self._poi_get_all,
++            }),
++            (translation_repository, {
++                "create": self._tr_create,
++                "get_by_id": self._tr_get_by_id,
++                "get_by_poi_and_language": self._tr_get_by_poi_and_language,
++                "get_all_by_poi": self._tr_get_all_by_poi,
++                "get_all_for_admin_by_poi": self._tr_get_all_for_admin_by_poi,
++                "update": self._tr_update,
++                "set_visibility": self._tr_set_visibility,
++                "get_public_guides": self._tr_get_public_guides,
++            }),
++            (admin_repository, {
++                "get_by_username": self._admin_get_by_username,
++                "get_by_id": self._admin_get_by_id,
++                "update_last_login": self._admin_update_last_login,
++            }),
++            (audio_service, {
++                "generate_audio": self._audio_generate,
++                "delete_audio": self._audio_delete,
++            }),
++        ]
++
++        for target, methods in replacements:
++            for name, replacement in methods.items():
++                monkeypatch.setattr(target, name, replacement)
++
++    # ---- POI ----------------------------------------------------------
++    def _poi_create(self, data: dict) -> dict:
++        poi = {**data, "id": self._poi_seq, "is_active": True}
++        self.pois[poi["id"]] = poi
++        self._poi_seq += 1
++        return dict(poi)
++
++    def _poi_get_by_id(self, poi_id: int):
++        poi = self.pois.get(poi_id)
++        return dict(poi) if poi else None
++
++    def _poi_update(self, poi_id: int, data: dict):
++        poi = self.pois.get(poi_id)
++        if poi is None:
++            return None
++        poi.update(data)
++        return dict(poi)
++
++    def _poi_set_visibility(self, poi_id: int, is_active: bool):
++        poi = self.pois.get(poi_id)
++        if poi is None:
++            return None
++        poi["is_active"] = is_active
++        return dict(poi)
++
++    def _poi_get_active(self) -> list[dict]:
++        return [dict(p) for p in self.pois.values() if p["is_active"]]
++
++    def _poi_get_all(self) -> list[dict]:
++        return [dict(p) for p in self.pois.values()]
++
++    # ---- Translation --------------------------------------------------
++    def _tr_create(self, data: dict) -> dict:
++        translation = {**data, "id": self._translation_seq, "is_active": True}
++        self.translations[translation["id"]] = translation
++        self._translation_seq += 1
++        return dict(translation)
++
++    def _tr_get_by_id(self, translation_id: int):
++        translation = self.translations.get(translation_id)
++        return dict(translation) if translation else None
++
++    def _tr_get_by_poi_and_language(self, poi_id: int, language_code: str):
++        # Giống SQL thật: chỉ trả bản dịch đang hiển thị.
++        for t in self.translations.values():
++            if (
++                t["poi_id"] == poi_id
++                and t["language_code"] == language_code
++                and t["is_active"]
++            ):
++                return dict(t)
++        return None
++
++    def _tr_get_all_by_poi(self, poi_id: int) -> list[dict]:
++        items = [
++            dict(t) for t in self.translations.values()
++            if t["poi_id"] == poi_id and t["is_active"]
++        ]
++        return sorted(items, key=lambda t: t["language_code"])
++
++    def _tr_get_all_for_admin_by_poi(self, poi_id: int) -> list[dict]:
++        items = [
++            dict(t) for t in self.translations.values()
++            if t["poi_id"] == poi_id
++        ]
++        return sorted(items, key=lambda t: t["language_code"])
++
++    def _tr_update(self, translation_id: int, data: dict):
++        translation = self.translations.get(translation_id)
++        if translation is None:
++            return None
++        translation.update(data)
++        return dict(translation)
++
++    def _tr_set_visibility(self, translation_id: int, is_active: bool):
++        translation = self.translations.get(translation_id)
++        if translation is None:
++            return None
++        translation["is_active"] = is_active
++        return dict(translation)
++
++    def _tr_get_public_guides(self, requested_language_code: str) -> list[dict]:
++        # Ưu tiên: ngôn ngữ yêu cầu -> en -> vi (giống truy vấn SQL).
++        guides = []
++        for poi in sorted(self.pois.values(), key=lambda p: p["id"]):
++            if not poi["is_active"]:
++                continue
++            active = {
++                t["language_code"]: t
++                for t in self.translations.values()
++                if t["poi_id"] == poi["id"] and t["is_active"]
++            }
++            chosen = next(
++                (
++                    active[code]
++                    for code in (requested_language_code, "en", "vi")
++                    if code in active
++                ),
++                None,
++            )
++            if chosen is None:
++                continue
++            guides.append({
++                "poi_id": poi["id"],
++                "poi_name": poi["name"],
++                "address": poi["address"],
++                "latitude": poi["latitude"],
++                "longitude": poi["longitude"],
++                "trigger_radius_meters": poi["trigger_radius_meters"],
++                "requested_language_code": requested_language_code,
++                "language_code": chosen["language_code"],
++                "title": chosen["title"],
++                "narration_text": chosen["narration_text"],
++                "audio_url": chosen["audio_url"],
++                "is_fallback": (
++                    chosen["language_code"] != requested_language_code
++                ),
++            })
++        return guides
++
++    # ---- Admin --------------------------------------------------------
++    def _admin_get_by_username(self, username: str):
++        for admin in self.admins.values():
++            if admin["username"] == username:
++                return dict(admin)
++        return None
++
++    def _admin_get_by_id(self, admin_id: int):
++        admin = self.admins.get(admin_id)
++        return dict(admin) if admin else None
++
++    def _admin_update_last_login(self, admin_id: int) -> None:
++        self.admins[admin_id]["last_login_at"] = datetime.now(timezone.utc)
++
++    # ---- Audio --------------------------------------------------------
++    def _new_audio(self) -> str:
++        url = f"/audio/fake-{self._audio_seq}.mp3"
++        self._audio_seq += 1
++        self.audio_files.add(url)
++        return url
++
++    async def _audio_generate(self, text: str, language_code: str) -> str:
++        return self._new_audio()
++
++    def _audio_delete(self, audio_url) -> bool:
++        if audio_url in self.audio_files:
++            self.audio_files.remove(audio_url)
++            return True
++        return False
++
++
++@pytest.fixture
++def backend(monkeypatch):
++    """Thay SQL Server và Edge-TTS bằng bản giả trong bộ nhớ."""
++    fake = FakeBackend()
++    fake.install(monkeypatch)
++    return fake
++
++
++@pytest.fixture
++def client(backend):
++    """TestClient gọi app thật; backend giả đảm bảo không chạm DB thật."""
++    from app.main import app
++
++    yield TestClient(app)
++    app.dependency_overrides.clear()
++
++
++@pytest.fixture
++def admin_headers(client, backend):
++    """Đăng nhập thật qua API, trả header Authorization cho các API admin."""
++    backend.add_admin(username="admin01", password="Secret123")
++    response = client.post(
++        "/api/auth/login",
++        json={"username": "admin01", "password": "Secret123"},
++    )
++    assert response.status_code == 200, response.text
++    return {"Authorization": f"Bearer {response.json()['access_token']}"}
+diff --git a/tests/integration/test_auth_api.py b/tests/integration/test_auth_api.py
+new file mode 100644
+index 0000000..c25223d
+--- /dev/null
++++ b/tests/integration/test_auth_api.py
+@@ -0,0 +1,86 @@
++import pytest
++
++ADMIN_ENDPOINTS = [
++    ("get", "/api/admin/pois"),
++    ("post", "/api/admin/pois"),
++    ("put", "/api/admin/pois/1"),
++    ("patch", "/api/admin/pois/1/visibility"),
++    ("get", "/api/admin/translations/poi/1"),
++    ("post", "/api/admin/translations"),
++    ("patch", "/api/admin/translations/1/visibility"),
++]
++
++
++def test_health_check(client):
++    response = client.get("/health")
++
++    assert response.status_code == 200
++    assert response.json()["status"] == "ok"
++
++
++def test_login_success_returns_bearer_token(client, backend):
++    backend.add_admin(username="admin01", password="Secret123")
++
++    response = client.post(
++        "/api/auth/login",
++        json={"username": "admin01", "password": "Secret123"},
++    )
++
++    assert response.status_code == 200
++    assert response.json()["token_type"] == "bearer"
++    assert response.json()["access_token"]
++
++
++def test_login_with_wrong_password_returns_401(client, backend):
++    backend.add_admin(username="admin01", password="Secret123")
++
++    response = client.post(
++        "/api/auth/login",
++        json={"username": "admin01", "password": "SaiMatKhau1"},
++    )
++
++    assert response.status_code == 401
++    assert response.headers["www-authenticate"] == "Bearer"
++
++
++@pytest.mark.parametrize(
++    "payload",
++    [
++        {"username": "ab", "password": "Secret123"},  # username quá ngắn
++        {"username": "admin01", "password": "123"},   # password quá ngắn
++        {"username": "admin01"},                      # thiếu password
++    ],
++)
++def test_login_validates_payload(client, payload):
++    assert client.post("/api/auth/login", json=payload).status_code == 422
++
++
++@pytest.mark.parametrize("method, path", ADMIN_ENDPOINTS)
++def test_admin_endpoints_require_a_token(client, method, path):
++    assert getattr(client, method)(path).status_code == 401
++
++
++def test_admin_endpoint_rejects_invalid_token(client):
++    response = client.get(
++        "/api/admin/pois",
++        headers={"Authorization": "Bearer khong-hop-le"},
++    )
++
++    assert response.status_code == 401
++
++
++def test_admin_endpoint_accepts_valid_token(client, admin_headers):
++    response = client.get("/api/admin/pois", headers=admin_headers)
++
++    assert response.status_code == 200
++
++
++def test_token_stops_working_when_account_is_deactivated(
++    client, backend, admin_headers
++):
++    for admin in backend.admins.values():
++        admin["is_active"] = False
++
++    response = client.get("/api/admin/pois", headers=admin_headers)
++
++    assert response.status_code == 401
+diff --git a/tests/integration/test_poi_api.py b/tests/integration/test_poi_api.py
+new file mode 100644
+index 0000000..95ef6ad
+--- /dev/null
++++ b/tests/integration/test_poi_api.py
+@@ -0,0 +1,202 @@
++import pytest
++from fastapi.testclient import TestClient
++from app.main import app
++from app.repositaries.poi_repository import poi_repository
++from app.dependencies.auth_dependency import require_admin
++
++client = TestClient(app)
++
++@pytest.fixture(autouse=True)
++def mock_admin_login():
++    app.dependency_overrides[require_admin] = lambda: {
++        "id": 1,
++        "username": "test_admin",
++        "role": "admin",
++    }
++
++    yield
++
++    app.dependency_overrides.clear()
++
++@pytest.fixture(autouse=True)
++def mock_poi_repository(monkeypatch):
++    pois = {}
++    next_id = {"value": 1}
++
++    def fake_create(data: dict):
++        poi_id = next_id["value"]
++
++        poi = {
++            **data,
++            "id": poi_id,
++            "is_active": True,
++        }
++
++        pois[poi_id] = poi
++        next_id["value"] += 1
++        return poi
++
++    def fake_get_by_id(poi_id: int):
++        return pois.get(poi_id)
++
++    def fake_get_active():
++        return [
++            poi
++            for poi in pois.values()
++            if poi["is_active"] is True
++        ]
++
++    def fake_get_all():
++        return list(pois.values())
++
++    def fake_update(poi_id: int, data: dict):
++        poi = pois.get(poi_id)
++
++        if poi is None:
++            return None
++
++        poi.update(data)
++        return poi
++
++    def fake_set_visibility(poi_id: int, is_active: bool):
++        poi = pois.get(poi_id)
++
++        if poi is None:
++            return None
++
++        poi["is_active"] = is_active
++        return poi
++
++    monkeypatch.setattr(
++        poi_repository,
++        "create",
++        fake_create,
++    )
++    monkeypatch.setattr(
++        poi_repository,
++        "get_by_id",
++        fake_get_by_id,
++    )
++    monkeypatch.setattr(
++        poi_repository,
++        "get_active",
++        fake_get_active,
++        raising=False,
++    )
++    monkeypatch.setattr(
++        poi_repository,
++        "get_all_active",
++        fake_get_active,
++        raising=False,
++    )
++    monkeypatch.setattr(
++        poi_repository,
++        "get_all",
++        fake_get_all,
++        raising=False,
++    )
++    monkeypatch.setattr(
++        poi_repository,
++        "get_all_for_admin",
++        fake_get_all,
++        raising=False,
++    )
++    monkeypatch.setattr(
++        poi_repository,
++        "update",
++        fake_update,
++    )
++    monkeypatch.setattr(
++        poi_repository,
++        "set_visibility",
++        fake_set_visibility,
++    )
++    
++def test_poi_full_flow():
++    # 1. Tạo địa điểm
++    new_poi = {
++    "name": "Điểm trưng bày A",
++    "description": "Nội dung thuyết minh của điểm A",
++    "address": "Bảo tàng",
++    "latitude": 10.776900,
++    "longitude": 106.700900,
++    "trigger_radius_meters": 2
++    }
++
++    create_response = client.post("/api/admin/pois", json=new_poi)
++
++    assert create_response.status_code == 201
++
++    created_poi = create_response.json()
++    poi_id = created_poi["id"]
++
++    assert created_poi["name"] == new_poi["name"]
++    assert created_poi["is_active"] is True
++
++    # 2. Lấy địa điểm theo id
++    get_response = client.get(f"/api/public/pois/{poi_id}")
++
++    assert get_response.status_code == 200
++    assert get_response.json()["id"] == poi_id
++
++    # 3. Cập nhật địa điểm
++    updated_data = {
++    "name": "Điểm trưng bày A đã cập nhật",
++    "description": "Nội dung thuyết minh đã cập nhật",
++    "address": "Bảo tàng",
++    "latitude": 10.776900,
++    "longitude": 106.700900,
++    "trigger_radius_meters": 2
++    }
++
++    update_response = client.put(
++        f"/api/admin/pois/{poi_id}",
++        json=updated_data
++    )
++
++    assert update_response.status_code == 200
++    assert update_response.json()["name"] == updated_data["name"]
++
++    # 4. Ẩn địa điểm
++    hide_response = client.patch(
++        f"/api/admin/pois/{poi_id}/visibility",
++        json={"is_active": False}
++    )
++
++    assert hide_response.status_code == 200
++    assert hide_response.json()["is_active"] is False
++
++    # 5. Địa điểm ẩn không thể được xem công khai
++    hidden_response = client.get(f"/api/public/pois/{poi_id}")
++
++    assert hidden_response.status_code == 404
++
++    list_response = client.get("/api/public/pois")
++
++    assert list_response.status_code == 200
++    assert all(
++        poi["id"] != poi_id
++        for poi in list_response.json()
++    )
++
++    # Admin vẫn xem được địa điểm đang bị ẩn
++    admin_list_response = client.get("/api/admin/pois")
++
++    assert admin_list_response.status_code == 200
++    assert any(
++        poi["id"] == poi_id and poi["is_active"] is False
++        for poi in admin_list_response.json()
++    )
++
++    # 6. Hiện lại địa điểm
++    show_response = client.patch(
++        f"/api/admin/pois/{poi_id}/visibility",
++        json={"is_active": True}
++    )
++
++    assert show_response.status_code == 200
++    assert show_response.json()["is_active"] is True
++
++    visible_response = client.get(f"/api/public/pois/{poi_id}")
++
++    assert visible_response.status_code == 200
+diff --git a/tests/integration/test_poi_validation_api.py b/tests/integration/test_poi_validation_api.py
+new file mode 100644
+index 0000000..0c07453
+--- /dev/null
++++ b/tests/integration/test_poi_validation_api.py
+@@ -0,0 +1,67 @@
++import pytest
++
++VALID_POI = {
++    "name": "Điểm trưng bày A",
++    "description": "Nội dung mô tả",
++    "address": "Bảo tàng",
++    "latitude": 10.7769,
++    "longitude": 106.7009,
++    "trigger_radius_meters": 2,
++}
++
++
++@pytest.mark.parametrize(
++    "field, value",
++    [
++        ("name", ""),
++        ("description", ""),
++        ("address", ""),
++        ("latitude", 91),
++        ("latitude", -91),
++        ("longitude", 181),
++        ("longitude", -181),
++        # PoiCreate hiện chỉ cho phép bán kính 1–2 m. Nếu đổi giới hạn
++        # trong app/schemas/poi_schema.py thì sửa hai dòng dưới đây.
++        ("trigger_radius_meters", 0.5),
++        ("trigger_radius_meters", 3),
++    ],
++)
++def test_create_poi_rejects_invalid_values(client, admin_headers, field, value):
++    response = client.post(
++        "/api/admin/pois",
++        json={**VALID_POI, field: value},
++        headers=admin_headers,
++    )
++
++    assert response.status_code == 422
++
++
++def test_create_poi_accepts_boundary_values(client, admin_headers):
++    payload = {
++        **VALID_POI,
++        "latitude": 90,
++        "longitude": -180,
++        "trigger_radius_meters": 1,
++    }
++
++    response = client.post("/api/admin/pois", json=payload, headers=admin_headers)
++
++    assert response.status_code == 201
++
++
++def test_update_unknown_poi_returns_404(client, admin_headers):
++    response = client.put(
++        "/api/admin/pois/999", json=VALID_POI, headers=admin_headers
++    )
++
++    assert response.status_code == 404
++
++
++def test_hide_unknown_poi_returns_404(client, admin_headers):
++    response = client.patch(
++        "/api/admin/pois/999/visibility",
++        json={"is_active": False},
++        headers=admin_headers,
++    )
++
++    assert response.status_code == 404
+diff --git a/tests/integration/test_public_api.py b/tests/integration/test_public_api.py
+new file mode 100644
+index 0000000..01f7e3c
+--- /dev/null
++++ b/tests/integration/test_public_api.py
+@@ -0,0 +1,100 @@
++import pytest
++
++
++def test_load_all_returns_empty_list_when_nothing_is_published(client):
++    response = client.get(
++        "/api/public/guide/load-all", params={"language_code": "vi"}
++    )
++
++    assert response.status_code == 200
++    assert response.json() == []
++
++
++def test_load_all_response_matches_schema(client, backend):
++    poi = backend.add_poi(name="Điểm A")
++    translation = backend.add_translation(
++        poi["id"], "vi", title="Giới thiệu", narration_text="Xin chào"
++    )
++
++    response = client.get(
++        "/api/public/guide/load-all", params={"language_code": "vi"}
++    )
++
++    assert response.status_code == 200
++    [item] = response.json()
++    assert item["poi_id"] == poi["id"]
++    assert item["title"] == "Giới thiệu"
++    assert item["audio_url"] == translation["audio_url"]
++    assert item["is_fallback"] is False
++
++
++def test_load_all_rejects_unknown_language(client):
++    response = client.get(
++        "/api/public/guide/load-all", params={"language_code": "xx"}
++    )
++
++    assert response.status_code == 422
++
++
++def test_nearby_returns_guide_when_visitor_is_inside_radius(client, backend):
++    poi = backend.add_poi(latitude=10.0, longitude=106.0)
++    backend.add_translation(
++        poi["id"], "vi", title="Tiêu đề VI", narration_text="Nội dung VI"
++    )
++
++    response = client.get(
++        "/api/public/guide/nearby",
++        params={
++            "latitude": 10.00001,  # ≈ 1,1 m cách điểm
++            "longitude": 106.0,
++            "language_code": "vi",
++        },
++    )
++
++    assert response.status_code == 200
++    body = response.json()
++    assert body["poi_id"] == poi["id"]
++    assert body["title"] == "Tiêu đề VI"
++    assert 0 < body["distance_meters"] <= 2
++
++
++def test_nearby_returns_null_when_visitor_is_outside_radius(client, backend):
++    poi = backend.add_poi(latitude=10.0, longitude=106.0)
++    backend.add_translation(poi["id"], "vi")
++
++    response = client.get(
++        "/api/public/guide/nearby",
++        params={"latitude": 10.001, "longitude": 106.0, "language_code": "vi"},
++    )
++
++    assert response.status_code == 200
++    assert response.json() is None
++
++
++def test_nearby_returns_404_when_language_is_missing(client, backend):
++    # README ghi "trả null nếu chưa có bản dịch", nhưng code hiện trả 404.
++    # Test này khóa hành vi thực tế; nếu đổi code thì sửa test (hoặc README).
++    poi = backend.add_poi(latitude=10.0, longitude=106.0)
++    backend.add_translation(poi["id"], "vi")
++
++    response = client.get(
++        "/api/public/guide/nearby",
++        params={"latitude": 10.0, "longitude": 106.0, "language_code": "en"},
++    )
++
++    assert response.status_code == 404
++
++
++@pytest.mark.parametrize(
++    "params",
++    [
++        {"latitude": 91, "longitude": 106, "language_code": "vi"},
++        {"latitude": 10, "longitude": 181, "language_code": "vi"},
++        {"latitude": 10, "longitude": 106, "language_code": "xx"},
++        {"latitude": 10, "longitude": 106},  # thiếu language_code
++    ],
++)
++def test_nearby_validates_query_parameters(client, params):
++    response = client.get("/api/public/guide/nearby", params=params)
++
++    assert response.status_code == 422
+diff --git a/tests/integration/test_translation_api.py b/tests/integration/test_translation_api.py
+new file mode 100644
+index 0000000..ce4aef1
+--- /dev/null
++++ b/tests/integration/test_translation_api.py
+@@ -0,0 +1,179 @@
++def create_poi(client, headers) -> dict:
++    response = client.post(
++        "/api/admin/pois",
++        headers=headers,
++        json={
++            "name": "Điểm trưng bày A",
++            "description": "Mô tả",
++            "address": "Bảo tàng",
++            "latitude": 10.7769,
++            "longitude": 106.7009,
++            "trigger_radius_meters": 2,
++        },
++    )
++    assert response.status_code == 201
++    return response.json()
++
++
++def translation_payload(poi_id: int, language: str = "vi") -> dict:
++    return {
++        "poi_id": poi_id,
++        "language_code": language,
++        "title": "Giới thiệu",
++        "narration_text": "Xin chào quý khách",
++    }
++
++
++def test_translation_full_flow(client, admin_headers):
++    poi = create_poi(client, admin_headers)
++
++    # 1. Tạo bản dịch -> backend tự sinh audio
++    created = client.post(
++        "/api/admin/translations",
++        headers=admin_headers,
++        json=translation_payload(poi["id"]),
++    )
++    assert created.status_code == 201
++    translation = created.json()
++    assert translation["audio_url"].startswith("/audio/")
++    assert translation["is_active"] is True
++
++    # 2. Khách xem được bản dịch (không cần đăng nhập)
++    public = client.get(f"/api/public/translations/poi/{poi['id']}/vi")
++    assert public.status_code == 200
++    assert public.json()["title"] == "Giới thiệu"
++
++    # 3. Tạo trùng ngôn ngữ -> 409
++    duplicate = client.post(
++        "/api/admin/translations",
++        headers=admin_headers,
++        json=translation_payload(poi["id"]),
++    )
++    assert duplicate.status_code == 409
++
++    # 4. Ẩn bản dịch: khách không thấy, admin vẫn thấy
++    hide = client.patch(
++        f"/api/admin/translations/{translation['id']}/visibility",
++        headers=admin_headers,
++        json={"is_active": False},
++    )
++    assert hide.status_code == 200
++    assert client.get(
++        f"/api/public/translations/poi/{poi['id']}/vi"
++    ).status_code == 404
++
++    admin_list = client.get(
++        f"/api/admin/translations/poi/{poi['id']}", headers=admin_headers
++    )
++    assert [t["id"] for t in admin_list.json()] == [translation["id"]]
++
++    # 5. Hiện lại
++    show = client.patch(
++        f"/api/admin/translations/{translation['id']}/visibility",
++        headers=admin_headers,
++        json={"is_active": True},
++    )
++    assert show.status_code == 200
++    assert client.get(
++        f"/api/public/translations/poi/{poi['id']}/vi"
++    ).status_code == 200
++
++
++def test_create_translation_rejects_unsupported_language(client, admin_headers):
++    poi = create_poi(client, admin_headers)
++
++    response = client.post(
++        "/api/admin/translations",
++        headers=admin_headers,
++        json=translation_payload(poi["id"], language="jp"),
++    )
++
++    assert response.status_code == 422
++
++
++def test_create_translation_for_unknown_poi_returns_404(client, admin_headers):
++    response = client.post(
++        "/api/admin/translations",
++        headers=admin_headers,
++        json=translation_payload(poi_id=999),
++    )
++
++    assert response.status_code == 404
++
++
++def test_changing_narration_replaces_audio_file(client, admin_headers, backend):
++    poi = create_poi(client, admin_headers)
++    created = client.post(
++        "/api/admin/translations",
++        headers=admin_headers,
++        json=translation_payload(poi["id"]),
++    ).json()
++
++    updated = client.patch(
++        f"/api/admin/translations/{created['id']}",
++        headers=admin_headers,
++        json={"narration_text": "Nội dung đã thay đổi"},
++    )
++
++    assert updated.status_code == 200
++    new_audio = updated.json()["audio_url"]
++    assert new_audio != created["audio_url"]
++    assert backend.audio_files == {new_audio}
++
++
++def test_update_with_empty_body_returns_400(client, admin_headers):
++    poi = create_poi(client, admin_headers)
++    created = client.post(
++        "/api/admin/translations",
++        headers=admin_headers,
++        json=translation_payload(poi["id"]),
++    ).json()
++
++    response = client.patch(
++        f"/api/admin/translations/{created['id']}",
++        headers=admin_headers,
++        json={},
++    )
++
++    assert response.status_code == 400
++
++
++def test_create_translation_from_text_file(client, admin_headers):
++    poi = create_poi(client, admin_headers)
++
++    response = client.post(
++        "/api/admin/translations/from-text-file",
++        headers=admin_headers,
++        data={
++            "poi_id": str(poi["id"]),
++            "language_code": "vi",
++            "title": "Giới thiệu",
++        },
++        files={
++            "text_file": (
++                "thuyet_minh.txt",
++                "Xin chào quý khách".encode("utf-8"),
++                "text/plain",
++            )
++        },
++    )
++
++    assert response.status_code == 201
++    assert response.json()["narration_text"] == "Xin chào quý khách"
++
++
++def test_text_file_upload_rejects_non_txt_file(client, admin_headers):
++    poi = create_poi(client, admin_headers)
++
++    response = client.post(
++        "/api/admin/translations/from-text-file",
++        headers=admin_headers,
++        data={
++            "poi_id": str(poi["id"]),
++            "language_code": "vi",
++            "title": "Giới thiệu",
++        },
++        files={"text_file": ("tai_lieu.pdf", b"%PDF-1.4", "application/pdf")},
++    )
++
++    assert response.status_code == 415
+diff --git a/tests/unit/test_audio_service.py b/tests/unit/test_audio_service.py
+new file mode 100644
+index 0000000..c59c4e1
+--- /dev/null
++++ b/tests/unit/test_audio_service.py
+@@ -0,0 +1,173 @@
++import asyncio
++import io
++from pathlib import Path
++
++import pytest
++from fastapi import HTTPException
++from starlette.datastructures import UploadFile
++
++import app.services.audio_service as audio_module
++from app.services.audio_service import (
++    MAX_NARRATION_CHARACTERS,
++    MAX_TEXT_FILE_SIZE,
++    audio_service,
++)
++
++
++def make_upload(content: bytes, filename: str = "thuyet_minh.txt") -> UploadFile:
++    return UploadFile(file=io.BytesIO(content), filename=filename)
++
++
++@pytest.fixture
++def audio_dir(tmp_path, monkeypatch):
++    """Trỏ thư mục audio sang thư mục tạm để test không đụng file thật."""
++    directory = tmp_path / "audio"
++    directory.mkdir()
++    monkeypatch.setattr(audio_module, "AUDIO_DIRECTORY", directory)
++    return directory
++
++
++@pytest.fixture
++def fake_tts(audio_dir, monkeypatch):
++    """Edge-TTS giả: không cần Internet."""
++
++    class FakeCommunicate:
++        created = []
++        should_fail = False
++
++        def __init__(self, text, voice, rate, volume, pitch):
++            self.text = text
++            self.voice = voice
++            FakeCommunicate.created.append(self)
++
++        async def save(self, path):
++            if FakeCommunicate.should_fail:
++                raise ConnectionError("mất kết nối Edge-TTS")
++            Path(path).write_bytes(b"ID3-fake-mp3")
++
++    monkeypatch.setattr(audio_module.edge_tts, "Communicate", FakeCommunicate)
++    return FakeCommunicate
++
++
++# ---------------------------------------------------------------- validate
++def test_validate_text_strips_whitespace():
++    assert audio_service._validate_text("  Xin chào  ") == "Xin chào"
++
++
++def test_validate_text_rejects_blank_text():
++    with pytest.raises(HTTPException) as error:
++        audio_service._validate_text("   ")
++
++    assert error.value.status_code == 422
++
++
++def test_validate_text_rejects_text_over_limit():
++    with pytest.raises(HTTPException) as error:
++        audio_service._validate_text("a" * (MAX_NARRATION_CHARACTERS + 1))
++
++    assert error.value.status_code == 413
++
++
++# ---------------------------------------------------------- read_text_file
++def test_read_text_file_accepts_utf8_with_bom():
++    content = b"\xef\xbb\xbf" + "Xin chào".encode("utf-8")
++
++    text = asyncio.run(audio_service.read_text_file(make_upload(content)))
++
++    assert text == "Xin chào"
++
++
++def test_read_text_file_rejects_non_txt_extension():
++    with pytest.raises(HTTPException) as error:
++        asyncio.run(
++            audio_service.read_text_file(make_upload(b"abc", "file.docx"))
++        )
++
++    assert error.value.status_code == 415
++
++
++def test_read_text_file_rejects_file_over_1mb():
++    upload = make_upload(b"a" * (MAX_TEXT_FILE_SIZE + 1))
++
++    with pytest.raises(HTTPException) as error:
++        asyncio.run(audio_service.read_text_file(upload))
++
++    assert error.value.status_code == 413
++
++
++def test_read_text_file_rejects_non_utf8_content():
++    upload = make_upload("Xin chào".encode("latin-1"))
++
++    with pytest.raises(HTTPException) as error:
++        asyncio.run(audio_service.read_text_file(upload))
++
++    assert error.value.status_code == 422
++
++
++def test_read_text_file_rejects_blank_file():
++    with pytest.raises(HTTPException) as error:
++        asyncio.run(audio_service.read_text_file(make_upload(b"  \n ")))
++
++    assert error.value.status_code == 422
++
++
++# ---------------------------------------------------------- generate_audio
++def test_generate_audio_creates_mp3_using_voice_of_language(fake_tts, audio_dir):
++    url = asyncio.run(audio_service.generate_audio("  Xin chào  ", "VI"))
++
++    assert url.startswith("/audio/") and url.endswith(".mp3")
++    assert (audio_dir / Path(url).name).read_bytes() == b"ID3-fake-mp3"
++    assert fake_tts.created[0].voice == "vi-VN-HoaiMyNeural"
++    assert fake_tts.created[0].text == "Xin chào"
++    assert list(audio_dir.glob("*.tmp")) == []
++
++
++def test_generate_audio_rejects_unsupported_language(fake_tts):
++    with pytest.raises(HTTPException) as error:
++        asyncio.run(audio_service.generate_audio("Xin chào", "xx"))
++
++    assert error.value.status_code == 400
++    assert fake_tts.created == []
++
++
++def test_generate_audio_returns_503_and_leaves_no_file_when_tts_fails(
++    fake_tts, audio_dir
++):
++    fake_tts.should_fail = True
++
++    with pytest.raises(HTTPException) as error:
++        asyncio.run(audio_service.generate_audio("Xin chào", "vi"))
++
++    assert error.value.status_code == 503
++    assert list(audio_dir.iterdir()) == []
++
++
++# ------------------------------------------------------------ delete_audio
++def test_delete_audio_removes_managed_file(audio_dir):
++    (audio_dir / "abc.mp3").write_bytes(b"x")
++
++    assert audio_service.delete_audio("/audio/abc.mp3") is True
++    assert not (audio_dir / "abc.mp3").exists()
++
++
++@pytest.mark.parametrize(
++    "url",
++    [None, "", "/static/abc.mp3", "https://evil.example/audio/abc.mp3"],
++)
++def test_delete_audio_ignores_urls_it_does_not_manage(audio_dir, url):
++    (audio_dir / "abc.mp3").write_bytes(b"x")
++
++    assert audio_service.delete_audio(url) is False
++    assert (audio_dir / "abc.mp3").exists()
++
++
++def test_delete_audio_blocks_path_traversal(tmp_path, audio_dir):
++    secret = tmp_path / "secret.txt"
++    secret.write_text("giữ lại", encoding="utf-8")
++
++    assert audio_service.delete_audio("/audio/../secret.txt") is False
++    assert secret.exists()
++
++
++def test_delete_audio_returns_false_for_missing_file(audio_dir):
++    assert audio_service.delete_audio("/audio/khong-ton-tai.mp3") is False
+diff --git a/tests/unit/test_auth_service.py b/tests/unit/test_auth_service.py
+new file mode 100644
+index 0000000..af674a5
+--- /dev/null
++++ b/tests/unit/test_auth_service.py
+@@ -0,0 +1,140 @@
++import os
++
++import jwt
++import pytest
++from fastapi import HTTPException
++
++from app.schemas.auth_schema import AdminLogin
++from app.services.auth_service import JWT_ALGORITHM, auth_service
++
++
++def login(username="admin01", password="Secret123"):
++    return auth_service.login_admin(
++        AdminLogin(username=username, password=password)
++    )
++
++
++def test_login_success_returns_bearer_token_and_updates_last_login(backend):
++    admin = backend.add_admin(username="admin01", password="Secret123")
++
++    result = login()
++
++    payload = jwt.decode(
++        result.access_token,
++        os.environ["JWT_SECRET_KEY"],
++        algorithms=[JWT_ALGORITHM],
++    )
++    assert result.token_type == "bearer"
++    assert payload["sub"] == str(admin["id"])
++    assert backend.admins[admin["id"]]["last_login_at"] is not None
++
++
++@pytest.mark.parametrize(
++    "username, password",
++    [
++        ("admin01", "SaiMatKhau1"),  # sai mật khẩu
++        ("khongco", "Secret123"),    # username không tồn tại
++    ],
++)
++def test_login_rejects_wrong_credentials(backend, username, password):
++    backend.add_admin(username="admin01", password="Secret123")
++
++    with pytest.raises(HTTPException) as error:
++        login(username, password)
++
++    assert error.value.status_code == 401
++    assert all(a["last_login_at"] is None for a in backend.admins.values())
++
++
++def test_login_rejects_inactive_admin(backend):
++    backend.add_admin(username="admin01", password="Secret123", is_active=False)
++
++    with pytest.raises(HTTPException) as error:
++        login()
++
++    assert error.value.status_code == 401
++
++
++def test_verify_token_takes_role_from_database_not_from_token(backend):
++    admin = backend.add_admin(role="STAFF")
++    token = login().access_token
++
++    current_admin = auth_service.verify_access_token(token)
++
++    assert current_admin["id"] == admin["id"]
++    assert current_admin["role"] == "STAFF"  # không phải "admin" trong token
++
++
++def test_verify_token_rejects_expired_token(backend, monkeypatch):
++    backend.add_admin()
++    monkeypatch.setenv("JWT_EXPIRE_MINUTES", "-1")  # token hết hạn ngay
++    token = login().access_token
++
++    with pytest.raises(HTTPException) as error:
++        auth_service.verify_access_token(token)
++
++    assert error.value.status_code == 401
++
++
++def test_verify_token_rejects_token_signed_with_another_key(backend):
++    backend.add_admin()
++    forged = jwt.encode(
++        {"sub": "1", "role": "admin"},
++        "khoa-gia-mao-khoa-gia-mao-khoa-gia-mao",
++        algorithm=JWT_ALGORITHM,
++    )
++
++    with pytest.raises(HTTPException) as error:
++        auth_service.verify_access_token(forged)
++
++    assert error.value.status_code == 401
++
++
++def test_verify_token_rejects_wrong_role_claim(backend):
++    backend.add_admin()
++    token = jwt.encode(
++        {"sub": "1", "role": "user"},
++        os.environ["JWT_SECRET_KEY"],
++        algorithm=JWT_ALGORITHM,
++    )
++
++    with pytest.raises(HTTPException) as error:
++        auth_service.verify_access_token(token)
++
++    assert error.value.status_code == 401
++
++
++def test_verify_token_rejects_garbage_string():
++    with pytest.raises(HTTPException) as error:
++        auth_service.verify_access_token("khong-phai-jwt")
++
++    assert error.value.status_code == 401
++
++
++def test_verify_token_rejects_admin_deactivated_after_login(backend):
++    admin = backend.add_admin()
++    token = login().access_token
++    backend.admins[admin["id"]]["is_active"] = False
++
++    with pytest.raises(HTTPException) as error:
++        auth_service.verify_access_token(token)
++
++    assert error.value.status_code == 401
++
++
++def test_missing_jwt_secret_returns_500(monkeypatch):
++    monkeypatch.delenv("JWT_SECRET_KEY")
++
++    with pytest.raises(HTTPException) as error:
++        auth_service.verify_access_token("bat-ky")
++
++    assert error.value.status_code == 500
++
++
++def test_non_numeric_expire_minutes_returns_500(monkeypatch):
++    monkeypatch.setenv("JWT_EXPIRE_MINUTES", "abc")
++
++    with pytest.raises(HTTPException) as error:
++        auth_service.verify_access_token("bat-ky")
++
++    assert error.value.status_code == 500
+diff --git a/tests/unit/test_guide_service.py b/tests/unit/test_guide_service.py
+new file mode 100644
+index 0000000..89a25a0
+--- /dev/null
++++ b/tests/unit/test_guide_service.py
+@@ -0,0 +1,27 @@
++import pytest
++from fastapi import HTTPException
++
++from app.repositaries.translation_repository import translation_repository
++from app.services.guide_service import guide_service
++
++
++def test_get_all_guides_normalizes_language_code(monkeypatch):
++    received = {}
++
++    def fake_public_guides(language_code):
++        received["language_code"] = language_code
++        return []
++
++    monkeypatch.setattr(
++        translation_repository, "get_public_guides", fake_public_guides
++    )
++
++    assert guide_service.get_all_guides(" KO ") == []
++    assert received["language_code"] == "ko"
++
++
++def test_get_all_guides_rejects_unsupported_language():
++    with pytest.raises(HTTPException) as error:
++        guide_service.get_all_guides("jp")
++
++    assert error.value.status_code == 400
+diff --git a/tests/unit/test_poi_service.py b/tests/unit/test_poi_service.py
+new file mode 100644
+index 0000000..928c831
+--- /dev/null
++++ b/tests/unit/test_poi_service.py
+@@ -0,0 +1,56 @@
++import pytest
++
++from app.services.poi_service import poi_service
++
++# 0,00001 độ vĩ độ ≈ 1,11 m (đã kiểm tra bằng công thức Haversine)
++STEP_1M = 0.00001
++
++
++def test_distance_between_same_point_is_zero():
++    assert poi_service.calculate_distance(10.0, 106.0, 10.0, 106.0) == 0
++
++
++def test_distance_one_degree_of_latitude():
++    distance = poi_service.calculate_distance(10.0, 106.0, 11.0, 106.0)
++
++    assert distance == pytest.approx(111_195, rel=1e-3)
++
++
++def test_distance_is_symmetric():
++    a_to_b = poi_service.calculate_distance(10.7769, 106.7009, 10.78, 106.705)
++    b_to_a = poi_service.calculate_distance(10.78, 106.705, 10.7769, 106.7009)
++
++    assert a_to_b == pytest.approx(b_to_a)
++
++
++def test_find_nearby_poi_inside_radius(backend):
++    poi = backend.add_poi(latitude=10.0, longitude=106.0)
++
++    result = poi_service.find_nearby_poi(10.0 + STEP_1M, 106.0)
++
++    assert result is not None
++    assert result["id"] == poi["id"]
++    assert result["distance_meters"] == pytest.approx(1.11, abs=0.05)
++
++
++def test_find_nearby_poi_outside_radius_returns_none(backend):
++    backend.add_poi(latitude=10.0, longitude=106.0)
++
++    # 0,0001 độ ≈ 11 m, xa hơn bán kính 2 m
++    assert poi_service.find_nearby_poi(10.0001, 106.0) is None
++
++
++def test_find_nearby_poi_ignores_hidden_poi(backend):
++    poi = backend.add_poi(latitude=10.0, longitude=106.0)
++    backend.pois[poi["id"]]["is_active"] = False
++
++    assert poi_service.find_nearby_poi(10.0, 106.0) is None
++
++
++def test_find_nearby_poi_returns_the_closest_one(backend):
++    backend.add_poi(name="Xa hơn", latitude=10.00001, longitude=106.0)
++    near = backend.add_poi(name="Gần hơn", latitude=10.000005, longitude=106.0)
++
++    result = poi_service.find_nearby_poi(10.0, 106.0)
++
++    assert result["id"] == near["id"]
+diff --git a/tests/unit/test_translation_service.py b/tests/unit/test_translation_service.py
+new file mode 100644
+index 0000000..6877874
+--- /dev/null
++++ b/tests/unit/test_translation_service.py
+@@ -0,0 +1,182 @@
++import asyncio
++
++import pytest
++from fastapi import HTTPException
++
++from app.repositaries.translation_repository import translation_repository
++from app.schemas.translation_schema import TranslationCreate, TranslationUpdate
++from app.services.translation_service import translation_service
++
++
++def run(coro):
++    return asyncio.run(coro)
++
++
++def make_create(poi_id, language="vi", text="Nội dung thuyết minh"):
++    return TranslationCreate(
++        poi_id=poi_id,
++        language_code=language,
++        title="Tiêu đề",
++        narration_text=text,
++    )
++
++
++# ------------------------------------------------------------------ create
++def test_create_generates_audio_and_saves_translation(backend):
++    poi = backend.add_poi()
++
++    result = run(translation_service.create_translation(make_create(poi["id"])))
++
++    assert result["language_code"] == "vi"
++    assert result["audio_url"] in backend.audio_files
++
++
++def test_create_for_missing_poi_returns_404_without_generating_audio(backend):
++    with pytest.raises(HTTPException) as error:
++        run(translation_service.create_translation(make_create(poi_id=999)))
++
++    assert error.value.status_code == 404
++    assert backend.audio_files == set()
++
++
++def test_create_duplicate_language_returns_409_even_if_existing_is_hidden(backend):
++    poi = backend.add_poi()
++    backend.add_translation(poi["id"], "vi", is_active=False)
++    audio_before = set(backend.audio_files)
++
++    with pytest.raises(HTTPException) as error:
++        run(translation_service.create_translation(make_create(poi["id"], "vi")))
++
++    assert error.value.status_code == 409
++    assert backend.audio_files == audio_before
++
++
++def test_create_removes_new_audio_when_database_fails(backend, monkeypatch):
++    poi = backend.add_poi()
++
++    def broken_create(data):
++        raise RuntimeError("SQL lỗi")
++
++    monkeypatch.setattr(translation_repository, "create", broken_create)
++
++    with pytest.raises(RuntimeError):
++        run(translation_service.create_translation(make_create(poi["id"])))
++
++    assert backend.audio_files == set()
++
++
++# ------------------------------------------------------------------ update
++def test_update_without_fields_returns_400(backend):
++    poi = backend.add_poi()
++    translation = backend.add_translation(poi["id"])
++
++    with pytest.raises(HTTPException) as error:
++        run(translation_service.update_translation(
++            translation["id"], TranslationUpdate()
++        ))
++
++    assert error.value.status_code == 400
++
++
++def test_update_missing_translation_returns_404(backend):
++    with pytest.raises(HTTPException) as error:
++        run(translation_service.update_translation(
++            999, TranslationUpdate(title="Mới")
++        ))
++
++    assert error.value.status_code == 404
++
++
++def test_update_title_only_keeps_audio(backend):
++    poi = backend.add_poi()
++    translation = backend.add_translation(poi["id"])
++    audio_before = set(backend.audio_files)
++
++    result = run(translation_service.update_translation(
++        translation["id"], TranslationUpdate(title="Tiêu đề mới")
++    ))
++
++    assert result["title"] == "Tiêu đề mới"
++    assert result["audio_url"] == translation["audio_url"]
++    assert backend.audio_files == audio_before
++
++
++def test_update_with_identical_text_does_not_regenerate_audio(backend):
++    poi = backend.add_poi()
++    translation = backend.add_translation(poi["id"])
++    audio_before = set(backend.audio_files)
++
++    run(translation_service.update_translation(
++        translation["id"],
++        TranslationUpdate(narration_text=translation["narration_text"]),
++    ))
++
++    assert backend.audio_files == audio_before
++
++
++def test_update_with_new_text_replaces_audio_after_database_success(backend):
++    poi = backend.add_poi()
++    translation = backend.add_translation(poi["id"])
++
++    result = run(translation_service.update_translation(
++        translation["id"], TranslationUpdate(narration_text="Nội dung mới")
++    ))
++
++    assert result["audio_url"] != translation["audio_url"]
++    assert result["audio_url"] in backend.audio_files
++    assert translation["audio_url"] not in backend.audio_files
++
++
++def test_update_keeps_old_audio_and_drops_new_one_when_database_fails(
++    backend, monkeypatch
++):
++    poi = backend.add_poi()
++    translation = backend.add_translation(poi["id"])
++
++    def broken_update(translation_id, data):
++        raise RuntimeError("SQL lỗi")
++
++    monkeypatch.setattr(translation_repository, "update", broken_update)
++
++    with pytest.raises(RuntimeError):
++        run(translation_service.update_translation(
++            translation["id"], TranslationUpdate(narration_text="Nội dung mới")
++        ))
++
++    assert backend.audio_files == {translation["audio_url"]}
++
++
++# -------------------------------------------------------------- regenerate
++def test_regenerate_audio_replaces_the_file(backend):
++    poi = backend.add_poi()
++    translation = backend.add_translation(poi["id"])
++
++    result = run(translation_service.regenerate_translation_audio(
++        translation["id"]
++    ))
++
++    assert result["audio_url"] != translation["audio_url"]
++    assert result["audio_url"] in backend.audio_files
++    assert translation["audio_url"] not in backend.audio_files
++
++
++# ------------------------------------------------------------- public read
++def test_get_translation_hides_translation_of_hidden_poi(backend):
++    poi = backend.add_poi()
++    backend.add_translation(poi["id"], "vi")
++    backend.pois[poi["id"]]["is_active"] = False
++
++    with pytest.raises(HTTPException) as error:
++        translation_service.get_translation(poi["id"], "vi")
++
++    assert error.value.status_code == 404
++
++
++def test_get_translation_hides_hidden_translation(backend):
++    poi = backend.add_poi()
++    backend.add_translation(poi["id"], "vi", is_active=False)
++
++    with pytest.raises(HTTPException) as error:
++        translation_service.get_translation(poi["id"], "vi")
++
++    assert error.value.status_code == 404
+-- 
+2.43.0
+

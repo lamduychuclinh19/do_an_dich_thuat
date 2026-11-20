@@ -129,6 +129,7 @@ jobs:
     name: Deploy lên server
     needs: publish-images
     runs-on: ubuntu-latest
+    if: false
     # Tạo Environment "production" trên GitHub; bật "Required reviewers"
     # nếu muốn có bước bấm duyệt trước khi deploy.
     environment: production
