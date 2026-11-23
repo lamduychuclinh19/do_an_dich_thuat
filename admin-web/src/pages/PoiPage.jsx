@@ -5,6 +5,8 @@ import api from "../services/api";
 import "./PoiPage.css";
 import PoiFormModal from "../components/PoiFormModal";
 import PoiDetailsModal from "../components/PoiDetailsModal";
+import PoiOverviewMap from "../components/PoiOverviewMap";
+import PoiOverlapList from "../components/PoiOverlapList";
 import { getSession } from "../services/auth";
 
 function normalizeOwnerSearchValue(value) {
@@ -82,6 +84,7 @@ function PoiPage() {
     const [statusFilter, setStatusFilter] = useState("all");
     const [ownerSearch, setOwnerSearch] = useState("");
     const [selectedOwnerId, setSelectedOwnerId] = useState(null);
+    const [selectedPoiId, setSelectedPoiId] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [changingPoiId, setChangingPoiId] = useState(null);
     const [errorMessage, setErrorMessage] = useState("");
@@ -271,6 +274,13 @@ function PoiPage() {
             return [savedPoi, ...currentPois];
         });
     };
+    const handleSelectOverlappingPoi = (poiId) => {
+        setSelectedPoiId(poiId);
+        document.getElementById("poi-overview-map")?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+        });
+    };
     return (
         <div className="poi-page">
             <div className="poi-heading">
@@ -282,18 +292,30 @@ function PoiPage() {
                 </div>
 
                 <div className="poi-heading-actions">
-
-                    {!isSystemAdmin && (
-                        <button
-                            type="button"
-                            className="add-poi-button"
-                            onClick={handleOpenCreate}
-                        >
-                            Thêm
-                        </button>
-                    )}
+                    <button
+                        type="button"
+                        className="add-poi-button"
+                        onClick={handleOpenCreate}
+                    >
+                        {isSystemAdmin ? "Thêm địa điểm" : "Thêm"}
+                    </button>
                 </div>
             </div>
+
+            <PoiOverviewMap
+                pois={pois}
+                isLoading={isLoading}
+                isSystemAdmin={isSystemAdmin}
+                selectedPoiId={selectedPoiId}
+            />
+
+            <PoiOverlapList
+                pois={pois}
+                isLoading={isLoading}
+                isSystemAdmin={isSystemAdmin}
+                selectedPoiId={selectedPoiId}
+                onSelectPoi={handleSelectOverlappingPoi}
+            />
 
             <section className="poi-container">
                 {isSystemAdmin && (
@@ -563,6 +585,7 @@ function PoiPage() {
                     editingPoi={editingPoi}
                     isSystemAdmin={isSystemAdmin}
                     shopOwners={activeShopOwners}
+                    existingPois={pois}
                     onClose={handleCloseForm}
                     onSaved={handlePoiSaved}
                 />

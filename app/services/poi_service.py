@@ -97,12 +97,18 @@ class PoiService:
             requested_owner_id=requested_owner_id,
         )
 
-        normalized_poi_id = requested_poi_id.strip()
+        normalized_poi_id = requested_poi_id.strip().upper()
 
         if not normalized_poi_id:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Mã địa điểm không được để trống",
+            )
+
+        if len(normalized_poi_id) > 10:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Mã địa điểm không được dài quá 10 ký tự",
             )
 
         if (
