@@ -29,8 +29,6 @@ jobs:
           cache: npm
           cache-dependency-path: admin-web/package-lock.json
 
-      - uses: actions/configure-pages@v5
-
       - name: Install dependencies
         working-directory: admin-web
         run: npm ci
