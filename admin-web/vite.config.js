@@ -4,6 +4,8 @@ import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // GitHub Pages publishes this project under /do_an_dich_thuat/.
+  base: '/do_an_dich_thuat/',
   plugins: [react()],
   server: {
     // Nhận request từ ngrok và các thiết bị khác trong mạng.
