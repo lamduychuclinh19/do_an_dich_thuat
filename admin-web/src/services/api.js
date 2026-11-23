@@ -5,10 +5,12 @@ import {
   getAccessToken,
 } from "./auth";
 
+const apiBaseUrl = (import.meta.env.VITE_API_URL || "").trim().replace(/\/+$/, "");
+
 const api = axios.create({
   // Khi chạy dev, Vite chuyển tiếp /api tới backend local. Chỉ đặt
   // VITE_API_URL khi backend được host riêng với frontend.
-  baseURL: import.meta.env.VITE_API_URL || "",
+  baseURL: apiBaseUrl,
   headers: {
     "Content-Type": "application/json",
   },
