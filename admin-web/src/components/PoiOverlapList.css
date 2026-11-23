@@ -1,0 +1,133 @@
+.poi-overlap-container {
+  margin-bottom: 20px;
+  overflow: hidden;
+  border: 1px solid #e0e6e4;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 8px 25px rgba(20, 55, 49, 0.05);
+}
+
+.poi-overlap-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #e7ecea;
+}
+
+.poi-overlap-heading h2 {
+  margin: 0 0 5px;
+  color: #173c36;
+  font-size: 17px;
+}
+
+.poi-overlap-heading p {
+  margin: 0;
+  color: #82908c;
+  font-size: 13px;
+}
+
+.poi-overlap-count {
+  flex: 0 0 auto;
+  padding: 7px 11px;
+  border: 1px solid #dce7e3;
+  border-radius: 999px;
+  color: #285048;
+  background: #f5f9f7;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.poi-overlap-table-wrapper {
+  overflow-x: auto;
+}
+
+.poi-overlap-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.poi-overlap-table th {
+  width: 50%;
+  padding: 13px 20px;
+  color: #70807c;
+  background: #f7f9f8;
+  font-size: 12px;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.poi-overlap-table td {
+  width: 50%;
+  padding: 14px 20px;
+  border-top: 1px solid #edf0ef;
+  color: #40534f;
+  vertical-align: middle;
+}
+
+.poi-overlap-name {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.poi-overlap-name strong {
+  color: #1b403a;
+  font-size: 14px;
+}
+
+.poi-overlap-name span {
+  color: #82908c;
+  font-size: 12px;
+}
+
+.poi-overlap-name:hover strong,
+.poi-overlap-name.is-selected strong {
+  color: #176b5c;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.poi-overlap-name:focus-visible {
+  outline: 2px solid #397369;
+  outline-offset: 4px;
+  border-radius: 3px;
+}
+
+.poi-overlap-empty {
+  margin: 0;
+  padding: 24px 20px;
+  color: #81908c;
+  font-size: 14px;
+  text-align: center;
+}
+
+.poi-overlap-footnote {
+  margin: 0;
+  padding: 10px 20px;
+  border-top: 1px solid #e7ecea;
+  color: #82908c;
+  font-size: 12px;
+}
+
+@media (max-width: 600px) {
+  .poi-overlap-heading {
+    align-items: flex-start;
+  }
+
+  .poi-overlap-table th,
+  .poi-overlap-table td {
+    min-width: 145px;
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+}

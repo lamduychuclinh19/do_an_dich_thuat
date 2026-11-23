@@ -183,6 +183,7 @@ function PoiFormModal({
   editingPoi,
   isSystemAdmin,
   shopOwners,
+  existingPois,
   onClose,
   onSaved,
 }) {
@@ -746,6 +747,8 @@ function PoiFormModal({
             latitude={formData.latitude}
             longitude={formData.longitude}
             radius={formData.trigger_radius_meters}
+            locations={existingPois}
+            excludeLocationId={editingPoi?.id}
             interactive
             onSelect={handleMapLocationSelect}
             title="Chọn vị trí địa điểm"

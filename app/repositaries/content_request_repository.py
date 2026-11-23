@@ -184,47 +184,27 @@ class ContentRequestRepository:
                        pd.previous_address AS poi_previous_address,
                        pd.previous_latitude AS poi_previous_latitude,
                        pd.previous_longitude AS poi_previous_longitude,
-                       pd.previous_trigger_radius_meters AS poi_previous_trigger_radius_meters,
-                       td.poi_id AS translation_poi_id, td.title AS translation_title,
-                       td.narration_text AS translation_narration_text,
-                       td.previous_title AS translation_previous_title,
-                       td.previous_narration_text AS translation_previous_narration_text
+                       pd.previous_trigger_radius_meters AS poi_previous_trigger_radius_meters
                 FROM dbo.content_change_requests r
                 JOIN dbo.people p ON p.id=r.submitted_by_person_id
                 LEFT JOIN dbo.poi_change_request_details pd ON pd.request_id=r.id
-                LEFT JOIN dbo.translation_change_request_details td ON td.request_id=r.id
                 WHERE r.submitted_by_person_id=:owner_id
                 ORDER BY r.created_at DESC, r.id DESC
             """), {"owner_id": owner_id}).mappings().all()
         items = []
         for row in rows:
             item = dict(row)
-            if item["request_type"] == "POI":
-                fields = ("name", "description", "address", "latitude", "longitude", "trigger_radius_meters")
-                item["details"] = {
-                    "requested_poi_id": row["poi_requested_poi_id"],
-                    **{field: row[f"poi_{field}"] for field in fields},
-                }
-                item["previous_details"] = self._previous_details(
-                    {f"previous_{field}": row[f"poi_previous_{field}"] for field in fields},
-                    fields,
-                )
-            else:
-                fields = ("title", "narration_text")
-                item["details"] = {
-                    "poi_id": row["translation_poi_id"],
-                    "title": row["translation_title"],
-                    "narration_text": row["translation_narration_text"],
-                }
-                item["previous_details"] = self._previous_details(
-                    {
-                        "previous_title": row["translation_previous_title"],
-                        "previous_narration_text": row["translation_previous_narration_text"],
-                    },
-                    fields,
-                )
+            fields = ("name", "description", "address", "latitude", "longitude", "trigger_radius_meters")
+            item["details"] = {
+                "requested_poi_id": row["poi_requested_poi_id"],
+                **{field: row[f"poi_{field}"] for field in fields},
+            }
+            item["previous_details"] = self._previous_details(
+                {f"previous_{field}": row[f"poi_previous_{field}"] for field in fields},
+                fields,
+            )
             for key in tuple(item):
-                if key.startswith("poi_") or key.startswith("translation_"):
+                if key.startswith("poi_"):
                     item.pop(key)
             items.append(item)
         return items

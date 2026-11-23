@@ -45,6 +45,51 @@
   overflow-wrap: anywhere;
 }
 
+.location-map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 8px;
+  color: #61716d;
+  font-size: 12px;
+}
+
+.location-map-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.location-map-legend i {
+  width: 10px;
+  height: 10px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(23, 60, 54, 0.25);
+}
+
+.existing-location-marker {
+  background: #356f9e;
+}
+
+.selected-location-marker {
+  background: #176b5c;
+}
+
+.location-map-popup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 140px;
+  color: #40534f;
+  font-size: 12px;
+}
+
+.location-map-popup strong {
+  color: #173c36;
+  font-size: 14px;
+}
+
 @media (max-width: 600px) {
   .location-map-canvas {
     height: 230px;

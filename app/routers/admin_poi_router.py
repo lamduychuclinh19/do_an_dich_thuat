@@ -38,9 +38,18 @@ def create_poi(
     data: BackOfficePoiCreate,
     current_person: dict = Depends(require_back_office),
 ):
-    """Tạo POI và xác định chủ sở hữu theo vai trò đang đăng nhập."""
-    if current_person.get("role") != "SHOP_OWNER":
-        raise HTTPException(status_code=403, detail="Admin cần xử lý yêu cầu tại mục Quản lý địa điểm")
+    """Admin tạo trực tiếp; Chủ địa điểm gửi yêu cầu để admin duyệt."""
+    if current_person.get("role") == "SYSTEM_ADMIN":
+        poi_data = PoiCreate(
+            **data.model_dump(exclude={"id", "owner_id"})
+        )
+        return poi_service.create_poi_for_back_office(
+            data=poi_data,
+            current_person=current_person,
+            requested_poi_id=data.id,
+            requested_owner_id=data.owner_id,
+        )
+
     return content_request_service.submit(ContentRequestCreate(
         request_type="POI", action="CREATE", details=data.model_dump(exclude={"owner_id"})
     ), current_person)
