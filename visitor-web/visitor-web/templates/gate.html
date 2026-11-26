@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Pay to Start{% endblock %}
+{% block body_class %}gate{% endblock %}
+
+{% block content %}
+<section class="gate-card">
+  <h1 data-i18n="gate_title">Unlock the audio guide</h1>
+  <p class="lead" data-i18n="gate_text">Pay to use for 1 hour</p>
+
+  <button id="btn-pay" class="btn btn-big" data-i18n="pay_button">Pay with VN Pay</button>
+  <p id="pay-msg" class="muted" aria-live="polite"></p>
+
+  <div id="order-box" class="order-box" hidden>
+    <img id="qr-img" class="qr" alt="VN Pay QR" width="220" height="220">
+    <div>
+      <p class="muted" data-i18n="order_amount">Amount</p>
+      <p id="order-amount" class="amount"></p>
+      <p class="muted" data-i18n="scan_or_open">Scan the code with the VN Pay app, or open it directly on your phone.</p>
+      <a id="order-link" class="btn btn-ghost" href="#" data-i18n="open_momo">Pay now</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}<script type="module" src="{{ url_for('static', filename='js/pages/gatePage.js') }}"></script>{% endblock %}
