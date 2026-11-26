@@ -46,8 +46,6 @@ def persist_guest_session(resp):
 
 
 def is_paid(sid):
-    if config.MOCK_PAYMENT or config.MOCK_API:
-        return _paid_until.get(sid, 0) > time.time()
     if _vnpay_paid.get(sid, 0) > time.time():   # still valid 1 hour after VNPay payment
         return True
     if _paid_until.get(sid, 0) > time.time():
@@ -134,21 +132,6 @@ def _client_ip():
 
 @app.post("/api/pay/create")
 def api_pay_create():
-    if config.MOCK_PAYMENT or config.MOCK_API:
-        try:
-            return jsonify(backend.create_payment(g.sid))
-        except BackendError as exc:
-            return backend_error(exc)
-
-    if not config.vnpay_is_configured():
-        return jsonify(
-            error=(
-                "Chưa cấu hình VNPay Sandbox. Hãy nhập VNPAY_TMN_CODE, "
-                "VNPAY_HASH_SECRET và VNPAY_RETURN_URL HTTPS công khai của visitor. "
-                "Nếu chỉ muốn thử giao diện local, đặt MOCK_PAYMENT=1."
-            )
-        ), 503
-
     order_id = "ORDER" + uuid.uuid4().hex[:10].upper()
     amount = 50000
     pay_url = vnpay_helper.create_vnpay_payment_url(
@@ -156,30 +139,14 @@ def api_pay_create():
     ORDERS[order_id] = {"sid": g.sid, "status": "PENDING", "amount": amount}
     return jsonify(order_id=order_id, amount=amount, currency="VND", pay_url=pay_url)
 
-
 @app.get("/api/pay/access")
 def api_pay_access():
-    """Tell the guide page how many seconds of access remain."""
-    access_expiry = (
-        _paid_until.get(g.sid, 0)
-        if config.MOCK_PAYMENT or config.MOCK_API
-        else _vnpay_paid.get(g.sid, 0)
-    )
-    left = int(access_expiry - time.time())
+    left = int(_vnpay_paid.get(g.sid, 0) - time.time())
     return jsonify(paid=is_paid(g.sid), seconds_left=max(left, 0))
-
 
 @app.get("/api/pay/status")
 def api_pay_status():
     order_id = request.args.get("order_id", "")
-
-    if config.MOCK_PAYMENT or config.MOCK_API:
-        order = backend.get_order(order_id)
-        if not order:
-            return jsonify(error="Không tìm thấy đơn thanh toán"), 404
-        if order.get("guest_session_id") != g.sid:
-            return jsonify(error="Đơn thanh toán không thuộc phiên này"), 403
-        return jsonify(order_id=order_id, status=order.get("status", "PENDING"))
 
     # VNPay order status is only kept in memory here, so this endpoint only
     # checks whether the current session has already been marked as PAID.

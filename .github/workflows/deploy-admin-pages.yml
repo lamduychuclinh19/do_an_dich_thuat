@@ -17,9 +17,6 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -29,18 +26,11 @@ jobs:
           cache: npm
           cache-dependency-path: admin-web/package-lock.json
 
+      - uses: actions/configure-pages@v5
+
       - name: Install dependencies
         working-directory: admin-web
         run: npm ci
-
-      - name: Validate FastAPI URL
-        env:
-          VITE_API_URL: ${{ vars.VITE_API_URL }}
-        run: |
-          if [ -z "$VITE_API_URL" ]; then
-            echo "::error::Set the repository Actions variable VITE_API_URL to the public FastAPI URL."
-            exit 1
-          fi
 
       - name: Build React app
         working-directory: admin-web
@@ -52,6 +42,4 @@ jobs:
         with:
           path: admin-web/dist
 
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - uses: actions/deploy-pages@v4

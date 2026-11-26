@@ -5,17 +5,12 @@ import {
   getAccessToken,
 } from "./auth";
 
-const apiBaseUrl = (import.meta.env.VITE_API_URL || "").trim().replace(/\/+$/, "");
-const isNgrokApi = apiBaseUrl.includes(".ngrok-free.dev");
-
 const api = axios.create({
   // Khi chạy dev, Vite chuyển tiếp /api tới backend local. Chỉ đặt
   // VITE_API_URL khi backend được host riêng với frontend.
-  baseURL: apiBaseUrl,
+  baseURL: import.meta.env.VITE_API_URL || "",
   headers: {
     "Content-Type": "application/json",
-    // Bypass ngrok Free's HTML interstitial for browser-based API calls.
-    ...(isNgrokApi ? { "ngrok-skip-browser-warning": "true" } : {}),
   },
 });
 
