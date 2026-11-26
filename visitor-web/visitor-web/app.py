@@ -2,6 +2,7 @@
 visitor-web: visitor-facing web UI written in Python (Flask).
 Integrated with VNPay Sandbox payment.
 """
+import fx
 import io
 import time
 import uuid
@@ -149,12 +150,22 @@ def api_pay_create():
             )
         ), 503
 
+    try:
+        conv = fx.to_vnd(config.PRICE_AMOUNT, config.PRICE_CURRENCY)
+    except Exception as exc:
+        return jsonify(error=f"Không quy đổi được tiền tệ: {exc}"), 502
+
+    amount = conv["amount_vnd"]
     order_id = "ORDER" + uuid.uuid4().hex[:10].upper()
-    amount = 50000
     pay_url = vnpay_helper.create_vnpay_payment_url(
         order_id, amount, "Payment for audio guide", _client_ip())
     ORDERS[order_id] = {"sid": g.sid, "status": "PENDING", "amount": amount}
-    return jsonify(order_id=order_id, amount=amount, currency="VND", pay_url=pay_url)
+    return jsonify(
+        order_id=order_id, amount=amount, currency="VND", pay_url=pay_url,
+        original_amount=config.PRICE_AMOUNT,
+        original_currency=config.PRICE_CURRENCY,
+        rate=conv["rate"], rate_source=conv["source"],
+    )
 
 
 @app.get("/api/pay/access")
