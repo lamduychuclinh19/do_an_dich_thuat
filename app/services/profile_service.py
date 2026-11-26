@@ -156,4 +156,16 @@ class ProfileService:
         )
 
 
+    def get_password_change_status(self, current_person: dict) -> dict:
+        """Return whether the signed-in back-office user should change password."""
+        if current_person.get("role") not in {"SYSTEM_ADMIN", "SHOP_OWNER"}:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Chức năng này chỉ dành cho tài khoản quản trị và Chủ địa điểm",
+            )
+        return {"should_change_password": people_repository.password_change_is_due(
+            current_person["id"]
+        )}
+
+
 profile_service = ProfileService()

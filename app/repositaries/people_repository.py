@@ -366,6 +366,7 @@ class PeopleRepository:
             SET
                 password_hash = :password_hash,
                 must_change_password = 1,
+                password_changed_at = SYSUTCDATETIME(),
                 updated_at = SYSUTCDATETIME()
             WHERE id = :person_id
               AND role = 'SHOP_OWNER'
@@ -448,6 +449,20 @@ class PeopleRepository:
 
         return self._row_to_dict(row)
 
+    def password_change_is_due(self, person_id: int) -> bool:
+        """Check whether the password has remained unchanged for one day."""
+        query = text("""
+            SELECT CASE WHEN password_changed_at <= DATEADD(DAY, -1, SYSUTCDATETIME())
+                THEN 1 ELSE 0 END
+            FROM dbo.people
+            WHERE id = :person_id
+              AND role IN ('SYSTEM_ADMIN', 'SHOP_OWNER')
+              AND is_active = 1
+        """)
+        with engine.connect() as connection:
+            result = connection.execute(query, {"person_id": person_id}).scalar_one_or_none()
+        return bool(result)
+
     def update_own_password(
         self,
         person_id: int,
@@ -460,6 +475,7 @@ class PeopleRepository:
             SET
                 password_hash = :password_hash,
                 must_change_password = 0,
+                password_changed_at = SYSUTCDATETIME(),
                 updated_at = SYSUTCDATETIME()
             WHERE id = :person_id
               AND role = 'SHOP_OWNER'

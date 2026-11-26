@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends
 
-from app.dependencies.auth_dependency import require_shop_owner
+from app.dependencies.auth_dependency import require_back_office, require_shop_owner
 from app.schemas.profile_schema import (
     ChangePasswordRequest,
     ProfileMessageResponse,
@@ -16,6 +16,14 @@ router = APIRouter(
     prefix="/api/profile",
     tags=["SHOP OWNER - Profile"],
 )
+
+
+@router.get("/password-status")
+def get_password_change_status(
+    current_person: dict = Depends(require_back_office),
+):
+    """Check whether a back-office account password is a day old."""
+    return profile_service.get_password_change_status(current_person)
 
 
 @router.get(

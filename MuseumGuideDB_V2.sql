@@ -31,6 +31,7 @@ BEGIN
         role NVARCHAR(30) NOT NULL,
         is_active BIT NOT NULL CONSTRAINT DF_people_is_active DEFAULT (1),
         must_change_password BIT NOT NULL CONSTRAINT DF_people_must_change_password DEFAULT (0),
+        password_changed_at DATETIME2 NOT NULL CONSTRAINT DF_people_password_changed_at DEFAULT (SYSUTCDATETIME()),
         last_login_at DATETIME2 NULL,
         created_by_person_id INT NULL,
         created_at DATETIME2 NOT NULL CONSTRAINT DF_people_created_at DEFAULT (SYSUTCDATETIME()),

@@ -174,3 +174,15 @@
     align-items: flex-start;
   }
 }
+
+
+.password-change-warning {
+  margin: 0 0 20px;
+  padding: 14px 18px;
+  border: 1px solid #f0d68a;
+  border-left: 4px solid #d39a21;
+  border-radius: 10px;
+  color: #75520d;
+  background: #fff7df;
+  font-weight: 600;
+}

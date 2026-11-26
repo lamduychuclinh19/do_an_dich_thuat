@@ -11,6 +11,25 @@ function DashboardPage() {
     const [visitorAnalytics, setVisitorAnalytics] = useState(null);
     const [visitorError, setVisitorError] = useState("");
     const isSystemAdmin = getSession()?.role === "SYSTEM_ADMIN";
+    const [passwordChangeWarning, setPasswordChangeWarning] = useState(false);
+
+    useEffect(() => {
+        let isMounted = true;
+        api.get("/api/profile/password-status")
+            .then((response) => {
+                if (isMounted) {
+                    setPasswordChangeWarning(
+                        Boolean(response.data?.should_change_password)
+                    );
+                }
+            })
+            .catch(() => {
+                if (isMounted) setPasswordChangeWarning(false);
+            });
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     useEffect(() => {
         const loadPois = async () => {
@@ -70,6 +89,12 @@ function DashboardPage() {
                     {new Date().toLocaleDateString("vi-VN")}
                 </div>
             </div>
+
+            {passwordChangeWarning && (
+                <div className="password-change-warning" role="alert">
+                    Tài khoản của bạn chưa đổi mật khẩu sau 1 ngày.
+                </div>
+            )}
 
             {errorMessage && (
                 <div className="dashboard-error">
