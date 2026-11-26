@@ -34,6 +34,16 @@ async function startPayment(redirect = true) {
     $("order-amount").textContent = o.amount
       ? new Intl.NumberFormat("vi-VN").format(o.amount) + " " + (o.currency === "VND" ? "₫" : o.currency)
       : "";
+          const rateEl = $("order-rate");
+    if (o.original_currency && o.original_currency !== "VND") {
+      const fmt = (n, c) => new Intl.NumberFormat("vi-VN").format(n) + " " + c;
+      rateEl.textContent =
+        `${fmt(o.original_amount, o.original_currency)} → ${fmt(o.amount, "₫")} ` +
+        `(1 ${o.original_currency} = ${fmt(Math.round(o.rate), "₫")})`;
+      rateEl.hidden = false;
+    } else {
+      rateEl.hidden = true;
+    }
     const link = $("order-link");
     link.href = o.pay_url;
     link.hidden = false;
