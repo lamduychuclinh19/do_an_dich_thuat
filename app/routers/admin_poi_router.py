@@ -64,8 +64,13 @@ def update_poi(
     current_person: dict = Depends(require_back_office),
 ):
     """Cập nhật POI theo phạm vi quyền của tài khoản hiện tại."""
-    if current_person.get("role") != "SHOP_OWNER":
-        raise HTTPException(status_code=403, detail="Admin cần xử lý yêu cầu tại mục Quản lý địa điểm")
+    if current_person.get("role") == "SYSTEM_ADMIN":
+        return poi_service.update_poi_for_back_office(
+            poi_id=poi_id,
+            data=data,
+            current_person=current_person,
+        )
+
     return content_request_service.submit(ContentRequestCreate(
         request_type="POI", action="UPDATE", target_poi_id=poi_id,
         details=data.model_dump(),

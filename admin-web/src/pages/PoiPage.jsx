@@ -537,15 +537,13 @@ function PoiPage() {
 
                                         <td>
                                             <div className="poi-action-group">
-                                                {!isSystemAdmin && (
-                                                    <button
-                                                        type="button"
-                                                        className="edit-poi-button"
-                                                        onClick={() => handleOpenEdit(poi)}
-                                                    >
-                                                        Cập nhật
-                                                    </button>
-                                                )}
+                                                <button
+                                                    type="button"
+                                                    className="edit-poi-button"
+                                                    onClick={() => handleOpenEdit(poi)}
+                                                >
+                                                    Cập nhật
+                                                </button>
 
                                                 <button
                                                     type="button"
