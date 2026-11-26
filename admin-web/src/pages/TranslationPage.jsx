@@ -365,18 +365,16 @@ function TranslationPage() {
 
                 <div className="translation-heading-actions">
 
-                    {!isSystemAdmin && (
-                        <button
-                            type="button"
-                            className="add-translation-button"
-                            onClick={handleOpenSourceForm}
-                            disabled={!selectedPoiId || isLoadingTranslations}
-                        >
-                            {hasTranslations
-                                ? "Cập nhật bản dịch"
-                                : "Tạo audio"}
-                        </button>
-                    )}
+                    <button
+                        type="button"
+                        className="add-translation-button"
+                        onClick={handleOpenSourceForm}
+                        disabled={!selectedPoiId || isLoadingTranslations}
+                    >
+                        {hasTranslations
+                            ? "Cập nhật bản dịch"
+                            : "Tạo audio"}
+                    </button>
                 </div>
             </div>
 
