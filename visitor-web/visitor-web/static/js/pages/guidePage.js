@@ -37,7 +37,7 @@ function renderList() {
   $("poi-list").innerHTML = items.length ? items.map(({ p, d }) => `
     <li class="poi-item" data-id="${esc(p.poi_id)}">
       <div>
-        <h3>${esc(p.title)}</h3>
+        <h3>${esc(p.poi_name)}</h3>
         <p class="muted">${esc(p.address)}</p>
         <p class="muted">${t("radius")}: ${p.trigger_radius_meters} m
           ${d !== null ? `<span class="chip">${t("distance")}: ${formatDistance(d)}</span>` : ""}
@@ -88,7 +88,7 @@ async function loadPois() {
 function popupHtml(p, info = "") {
   const gm = `https://www.google.com/maps/dir/?api=1&destination=${p.latitude},${p.longitude}&travelmode=driving`;
   return `<div class="poi-popup">
-    <strong>${esc(p.title)}</strong>
+    <strong>${esc(p.poi_name)}</strong>
     ${info ? `<p class="route-info">${info}</p>` : ""}
     <div class="popup-actions">
       <button type="button" class="popup-btn" data-route="${esc(p.poi_id)}">${t("route_btn")}</button>
