@@ -364,17 +364,18 @@ function TranslationPage() {
                 </div>
 
                 <div className="translation-heading-actions">
-
-                    <button
-                        type="button"
-                        className="add-translation-button"
-                        onClick={handleOpenSourceForm}
-                        disabled={!selectedPoiId || isLoadingTranslations}
-                    >
-                        {hasTranslations
-                            ? "Cập nhật bản dịch"
-                            : "Tạo audio"}
-                    </button>
+                    {!isSystemAdmin && (
+                        <button
+                            type="button"
+                            className="add-translation-button"
+                            onClick={handleOpenSourceForm}
+                            disabled={!selectedPoiId || isLoadingTranslations}
+                        >
+                            {hasTranslations
+                                ? "Cập nhật bản dịch"
+                                : "Tạo audio"}
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -385,14 +386,24 @@ function TranslationPage() {
                             <h2>Danh sách bản dịch</h2>
                             <p>{selectedPoi ? selectedPoi.name : "Chọn địa điểm để xem các bản dịch."}</p>
                         </div>
-                        <button
-                            type="button"
-                            className="admin-page-refresh"
-                            onClick={refreshData}
-                            disabled={isRefreshing || isLoadingPois}
-                        >
-                            {isRefreshing || isLoadingPois ? "Đang tải..." : "Làm mới"}
-                        </button>
+                        <div className="translation-heading-actions">
+                            <button
+                                type="button"
+                                className="add-translation-button"
+                                onClick={handleOpenSourceForm}
+                                disabled={!selectedPoiId || !hasTranslations || isLoadingTranslations}
+                            >
+                                Cập nhật
+                            </button>
+                            <button
+                                type="button"
+                                className="admin-page-refresh"
+                                onClick={refreshData}
+                                disabled={isRefreshing || isLoadingPois}
+                            >
+                                {isRefreshing || isLoadingPois ? "Đang tải..." : "Làm mới"}
+                            </button>
+                        </div>
                     </div>
                 )}
                 <div className="translation-filter-field">
@@ -531,7 +542,7 @@ function TranslationPage() {
                     </div>
                 )}
             </section>
-            {isFormOpen && !isSystemAdmin && (
+            {isFormOpen && (
                 <TranslationFormModal
                     isOpen={isFormOpen}
                     poiId={selectedPoiId}
