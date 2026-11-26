@@ -28,11 +28,11 @@ export function mountPoiModal(root) {
     root.innerHTML = `
       <div class="poi-modal__card" role="dialog" aria-modal="true" aria-labelledby="poi-modal-title" tabindex="-1">
         <div class="poi-modal__banner">
-          <img src="${esc(banner)}" alt="${esc(p.title)}">
+          <img src="${esc(banner)}" alt="${esc(p.poi_name)}">
         </div>
 
         <div class="poi-modal__body">
-          <h2 id="poi-modal-title" class="poi-modal__name">${esc(p.title)}</h2>
+          <h2 id="poi-modal-title" class="poi-modal__name">${esc(p.poi_name)}</h2>
           <p class="poi-modal__address">📍 ${esc(p.address)}</p>
           <p class="poi-modal__desc">${esc(desc)}</p>
           ${p.is_fallback ? `<p class="note">${esc(t("fallback_note", { lang: langLabel(p.language_code) }))}</p>` : ""}
